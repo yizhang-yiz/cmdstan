@@ -69,18 +69,18 @@ include_directories("${Stan_SOURCE_DIR}/src" "${Stan_BINARY_DIR}/src")
 
 # print 
 set(PRINT_SRCS ${PROJECT_SOURCE_DIR}/src/cmdstan/print.cpp)
-add_executable(print ${PRINT_SRCS})
-target_link_libraries(print stan)
-#set(PRINT_BIN ${CMAKE_CURRENT_BINARY_DIR}/print)
+add_executable(cmdstan-print ${PRINT_SRCS})
+set_target_properties(cmdstan-print PROPERTIES OUTPUT_NAME print)
+target_link_libraries(cmdstan-print stan)
+set(PRINT_BIN ${CMAKE_CURRENT_BINARY_DIR}/print)
 
 # stanc
 set(STANC_SRCS ${PROJECT_SOURCE_DIR}/src/cmdstan/stanc.cpp)
 add_executable(cmdstan-stanc ${STANC_SRCS})
 set_target_properties(cmdstan-stanc PROPERTIES OUTPUT_NAME stanc)
 target_link_libraries(cmdstan-stanc stanc)
-#set(STANC_BIN ${CMAKE_CURRENT_BINARY_DIR}/stanc)
+set(STANC_BIN ${CMAKE_CURRENT_BINARY_DIR}/stanc)
 
 # unit tests
-#include(CTest)
 #add_subdirectory(src/test)
 
