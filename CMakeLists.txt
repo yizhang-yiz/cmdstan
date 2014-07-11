@@ -10,7 +10,19 @@ set(CmdStan_VERSION_PATCH ${Stan_VERSION_PATCH})
 set(CmdStan_VERSION_INTERFACE "1") # Increment this if creating a new release of CmdStan without a new release of Stan
 set(CmdStan_VERSION "${CmdStan_VERSION_MAJOR}.${CmdStan_VERSION_MINOR}.${CmdStan_VERSION_PATCH}-${CmdStan_VERSION_INTERFACE}")
 
+set(CMAKE_MODULE_PATH ${Stan_SOURCE_DIR}/cmake)
+
 include(CTest)
+
+option(BUILD_CMDSTAN_GUIDE
+       "Whether the CmdStan Users Guide should be built"
+       ON)
+
+if(BUILD_CMDSTAN_GUIDE)
+  include(UseLATEX)
+
+  add_subdirectory( src/docs/cmdstan-guide )
+endif()
 
 # Find Eigen
 if(USE_SYSTEM_EIGEN)
@@ -54,7 +66,6 @@ add_definitions(-DBOOST_RESULT_OF_USE_TR1
                 -DBOOST_DISABLE_ASSERTS)
 # Top level include
 include_directories("${Stan_SOURCE_DIR}/src" "${Stan_BINARY_DIR}/src")
-
 
 # print 
 set(PRINT_SRCS ${PROJECT_SOURCE_DIR}/src/cmdstan/print.cpp)
