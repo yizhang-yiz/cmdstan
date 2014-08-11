@@ -1,0 +1,22 @@
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256   -c -O3 -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 src/test/unit/prob/distributions/multivariate/continuous/cholesky3_test.cpp -o test/unit/prob/distributions/multivariate/continuous/cholesky3.o
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256    -O3 lib/gtest_1.7.0/src/gtest_main.cc test/unit/prob/distributions/multivariate/continuous/cholesky3.o -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 -o test/unit/prob/distributions/multivariate/continuous/cholesky3 test/libgtest.a -Lbin -lstan
+test/unit/prob/distributions/multivariate/continuous/cholesky3 --gtest_output="xml:test/unit/prob/distributions/multivariate/continuous/cholesky3.xml"
+Running main() from gtest_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from generating
+[ RUN      ] generating.lkj
+         1          0          0          0          0          0          0          0
+ -0.270705   0.962662          0          0          0          0          0          0
+  0.290675   0.494838   0.818928          0          0          0          0          0
+ 0.0520769  0.0516107  0.0228399   0.997047          0          0          0          0
+-0.00503524   0.791538   0.316523  -0.337016   0.399595          0          0          0
+-0.00443255   0.621743   -0.18321  0.0104873 -0.0786122   0.757338          0          0
+  0.419139   0.188383   0.224608 0.00505884   0.673381  0.0341779   0.532682          0
+  0.302648  -0.407837  -0.553996   0.350206  -0.144808  -0.306403 -0.0514032   0.441614
+[       OK ] generating.lkj (1 ms)
+[----------] 1 test from generating (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (1 ms total)
+[  PASSED  ] 1 test.

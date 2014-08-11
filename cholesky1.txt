@@ -1,0 +1,16 @@
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256   -c -O3 -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 src/test/unit/prob/distributions/multivariate/continuous/cholesky1_test.cpp -o test/unit/prob/distributions/multivariate/continuous/cholesky1.o
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256    -O3 lib/gtest_1.7.0/src/gtest_main.cc test/unit/prob/distributions/multivariate/continuous/cholesky1.o -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 -o test/unit/prob/distributions/multivariate/continuous/cholesky1 test/libgtest.a -Lbin -lstan
+test/unit/prob/distributions/multivariate/continuous/cholesky1 --gtest_output="xml:test/unit/prob/distributions/multivariate/continuous/cholesky1.xml"
+Running main() from gtest_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from generating
+[ RUN      ] generating.lkj
+       1        0
+0.841028 0.540992
+[       OK ] generating.lkj (0 ms)
+[----------] 1 test from generating (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (0 ms total)
+[  PASSED  ] 1 test.

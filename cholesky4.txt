@@ -1,0 +1,30 @@
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256   -c -O3 -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 src/test/unit/prob/distributions/multivariate/continuous/cholesky4_test.cpp -o test/unit/prob/distributions/multivariate/continuous/cholesky4.o
+g++ -I src -isystem lib/eigen_3.2.0 -isystem lib/boost_1.54.0 -Wall -DBOOST_RESULT_OF_USE_TR1 -DBOOST_NO_DECLTYPE -DBOOST_DISABLE_ASSERTS -pipe -DEIGEN_NO_DEBUG -Wno-unused-function -ftemplate-depth-256    -O3 lib/gtest_1.7.0/src/gtest_main.cc test/unit/prob/distributions/multivariate/continuous/cholesky4.o -DGTEST_USE_OWN_TR1_TUPLE -I lib/gtest_1.7.0/include -I lib/gtest_1.7.0 -o test/unit/prob/distributions/multivariate/continuous/cholesky4 test/libgtest.a -Lbin -lstan
+test/unit/prob/distributions/multivariate/continuous/cholesky4 --gtest_output="xml:test/unit/prob/distributions/multivariate/continuous/cholesky4.xml"
+Running main() from gtest_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from generating
+[ RUN      ] generating.lkj
+          1           0           0           0           0           0           0           0           0           0           0           0           0           0           0           0
+  -0.133196     0.99109           0           0           0           0           0           0           0           0           0           0           0           0           0           0
+   0.186467    0.169793    0.967678           0           0           0           0           0           0           0           0           0           0           0           0           0
+  0.0408809  -0.0988546   -0.349504    0.930808           0           0           0           0           0           0           0           0           0           0           0           0
+-0.00314139    0.210911   0.0847381   -0.173405    0.958257           0           0           0           0           0           0           0           0           0           0           0
+ -0.0122842    0.236109   0.0707035   -0.330012  -0.0912777    0.906567           0           0           0           0           0           0           0           0           0           0
+  -0.185983   -0.163108    0.285155   -0.409851   -0.147626  -0.0520075    0.815486           0           0           0           0           0           0           0           0           0
+ -0.0884718      0.4745    0.305173   0.0127889  0.00465402     0.34736    0.259116     0.69707           0           0           0           0           0           0           0           0
+   0.221278    0.207321  -0.0702121    0.148913     0.14958    0.279685  -0.0138315   -0.285808    0.835747           0           0           0           0           0           0           0
+  0.0354427    0.272181    0.126675   0.0532691   -0.604227  -0.0999572    0.016117   -0.259684  0.00592232    0.680415           0           0           0           0           0           0
+   0.499787    0.241598    0.203957    0.266917  -0.0543966    0.173056   -0.104821   0.0295549  -0.0923698  -0.0378133    0.724065           0           0           0           0           0
+   0.414897   -0.120606   -0.202279    0.126062    0.569384    0.270174  -0.0342232 -0.00915184  -0.0181665    0.100294    0.198984    0.555045           0           0           0           0
+   0.127898   -0.302548    0.461238    0.149936  -0.0375542  0.00924524   -0.179332    0.247695  0.00204603    0.188015    0.413604    0.179769    0.568452           0           0           0
+  -0.305914    0.316028   -0.227066      0.3401    0.177127   0.0955284  -0.0956747  -0.0550401     0.21212   -0.123298   -0.180368   0.0668581    0.125654    0.688218           0           0
+ -0.0746958   0.0184103    0.121555    0.573441   0.0767933    0.489224    0.336928   -0.113988    0.314387   0.0205426    0.123877    0.101683   -0.142452   0.0441668    0.362671           0
+  0.0121575   -0.255433    0.257235  -0.0242869  -0.0320431    0.143197    0.227785     0.19365   -0.397707   0.0607078  -0.0638351    -0.12646     -0.6718    0.178963    0.197306    0.229632
+[       OK ] generating.lkj (1 ms)
+[----------] 1 test from generating (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (1 ms total)
+[  PASSED  ] 1 test.
