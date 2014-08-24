@@ -6,7 +6,7 @@ foreach(source ${TEST_SRCS})
   string(REPLACE ".cpp" "${empty_string}" executable ${source})
   string(REPLACE "/"  "_" executable ${executable})
   string(REPLACE "\\"  "_" executable ${executable})
-  set(executable cmdstan_models_${executable})
+  set(executable cmdstan_test_models_${executable})
 
   add_executable(${executable} ${source})
   # A small number of tests rely on generated code, add this dependency to
@@ -14,7 +14,7 @@ foreach(source ${TEST_SRCS})
 #  add_dependencies(${executable} ${NOMAIN_SRCS})
   add_dependencies(${executable} CmdStan_Test_Models)
   target_link_libraries(${executable} stan stanc ${GTEST_LIBRARIES})
-  add_test(CmdStan_UnitTests
+  add_test(${executable}
            ${RUNCMD} ${CMAKE_CURRENT_BINARY_DIR} ${executable} --gtest_output="xml:${executable}.xml")
 endforeach()
 

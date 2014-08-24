@@ -13,6 +13,8 @@ set(CMAKE_MODULE_PATH "${CmdStan_SOURCE_DIR}/stan/cmake")
 set(STAN_PATH "${CmdStan_SOURCE_DIR}/stan")
 
 if(BUILD_CMDSTAN_TESTS)
+  include(CTest)
+
   set(NEED_GTEST ON)
 endif()
 
@@ -30,8 +32,6 @@ set(CmdStan_VERSION_PATCH ${Stan_VERSION_PATCH})
 set(CmdStan_VERSION_INTERFACE "1") # Increment this if creating a new release of CmdStan without a new release of Stan
 set(CmdStan_VERSION "${CmdStan_VERSION_MAJOR}.${CmdStan_VERSION_MINOR}.${CmdStan_VERSION_PATCH}-${CmdStan_VERSION_INTERFACE}")
 
-
-include(CTest)
 
 if(BUILD_CMDSTAN_GUIDE)
   add_subdirectory( src/docs/cmdstan-guide )
