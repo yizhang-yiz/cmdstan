@@ -10,7 +10,7 @@ foreach(flag_var
   string(REGEX REPLACE "/O[^0]" "/O0" ${flag_var} "${${flag_var}}")
 endforeach(flag_var)
 
-#add_subdirectory(test-models)
+add_subdirectory(test-models)
 add_subdirectory(models)
 add_subdirectory(interface)
 
