@@ -3,6 +3,11 @@ bin/print$(EXE) : bin/cmdstan/print.o
 	@mkdir -p $(dir $@)
 	$(LINK.c) -O$(O_STANC) $(OUTPUT_OPTION) $< $(LDLIBS)
 
+.PRECIOUS: bin/print_diagnostics$(EXE)
+bin/print_diagnostics$(EXE) : bin/cmdstan/print_diagnostics.o
+	@mkdir -p $(dir $@)
+	$(LINK.c) -O$(O_STANC) $(OUTPUT_OPTION) $< $(LDLIBS)
+
 .PRECIOUS: bin/stanc$(EXE)
 bin/stanc$(EXE) : bin/cmdstan/stanc.o bin/libstanc.a
 	@mkdir -p $(dir $@)
