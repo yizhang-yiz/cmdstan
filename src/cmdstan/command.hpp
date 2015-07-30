@@ -33,6 +33,7 @@
 #include <stan/services/arguments/arg_diagnose.hpp>
 #include <stan/services/arguments/arg_diagnostic_file.hpp>
 #include <stan/services/arguments/arg_engine.hpp>
+#include <stan/services/arguments/arg_exhaustive.hpp>
 #include <stan/services/arguments/arg_fail.hpp>
 #include <stan/services/arguments/arg_fixed_param.hpp>
 #include <stan/services/arguments/arg_history_size.hpp>
@@ -80,13 +81,18 @@
 #include <stan/services/arguments/singleton_argument.hpp>
 #include <stan/services/arguments/unvalued_argument.hpp>
 #include <stan/services/arguments/valued_argument.hpp>
+
 #include <stan/mcmc/fixed_param_sampler.hpp>
+
 #include <stan/mcmc/hmc/static/adapt_unit_e_static_hmc.hpp>
 #include <stan/mcmc/hmc/static/adapt_diag_e_static_hmc.hpp>
 #include <stan/mcmc/hmc/static/adapt_dense_e_static_hmc.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_unit_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_diag_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_dense_e_nuts.hpp>
+#include <stan/mcmc/hmc/exhaustive/adapt_unit_e_exhaustive.hpp>
+#include <stan/mcmc/hmc/exhaustive/adapt_diag_e_exhaustive.hpp>
+#include <stan/mcmc/hmc/exhaustive/adapt_dense_e_exhaustive.hpp>
 
 #include <stan/model/util.hpp>
 
@@ -98,6 +104,7 @@
 #include <stan/services/diagnose.hpp>
 #include <stan/services/init/init_adapt.hpp>
 #include <stan/services/init/init_nuts.hpp>
+#include <stan/services/init/init_exhaustive.hpp>
 #include <stan/services/init/init_static_hmc.hpp>
 #include <stan/services/init/init_windowed_adapt.hpp>
 #include <stan/services/init/initialize_state.hpp>
@@ -550,6 +557,8 @@ namespace stan {
             engine_index = 0;
           } else if (engine->value() == "nuts") {
             engine_index = 1;
+          } else if (engine->value() == "exhaustive") {
+            engine_index = 2;
           }
 
           int metric_index = 0;
@@ -586,6 +595,15 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 2: {
+              typedef stan::mcmc::unit_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
 
             case 10: {
               typedef stan::mcmc::diag_e_static_hmc<Model, rng_t> sampler;
@@ -601,6 +619,15 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_nuts<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
+              
+            case 12: {
+              typedef stan::mcmc::diag_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
                 return 0;
               break;
             }
@@ -622,6 +649,15 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 22: {
+              typedef stan::mcmc::dense_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
 
             case 100: {
               typedef stan::mcmc::adapt_unit_e_static_hmc<Model, rng_t> sampler;
@@ -639,6 +675,17 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_nuts<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_adapt<sampler>(sampler_ptr, adapt, cont_params, &std::cout))
+                return 0;
+              break;
+            }
+              
+            case 102: {
+              typedef stan::mcmc::adapt_unit_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
                 return 0;
               if (!init::init_adapt<sampler>(sampler_ptr, adapt, cont_params, &std::cout))
                 return 0;
@@ -666,6 +713,17 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 112: {
+              typedef stan::mcmc::adapt_diag_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
+                return 0;
+              break;
+            }
 
             case 120: {
               typedef stan::mcmc::adapt_dense_e_static_hmc<Model, rng_t>
@@ -684,6 +742,18 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_nuts<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_windowed_adapt<sampler>
+                  (sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
+                return 0;
+              break;
+            }
+              
+            case 122: {
+              typedef stan::mcmc::adapt_dense_e_exhaustive<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
                 return 0;
               if (!init::init_windowed_adapt<sampler>
                   (sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
