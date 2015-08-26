@@ -783,6 +783,10 @@ namespace stan {
           (parser.arg("method")->arg("variational")
                                ->arg("tuning_iter"))->value();
 
+        bool subsample = dynamic_cast<stan::services::bool_argument*>
+          (parser.arg("method")->arg("variational")
+                               ->arg("subsample"))->value();
+
         int output_samples = dynamic_cast<stan::services::int_argument*>
           (parser.arg("method")->arg("variational")
                                ->arg("output_samples"))->value();
@@ -838,6 +842,7 @@ namespace stan {
                      base_rng,
                      eval_elbo,
                      output_samples,
+                     subsample,
                      &std::cout,
                      output_stream,
                      diagnostic_stream);
@@ -867,6 +872,7 @@ namespace stan {
                      base_rng,
                      eval_elbo,
                      output_samples,
+                     subsample,
                      &std::cout,
                      output_stream,
                      diagnostic_stream);
