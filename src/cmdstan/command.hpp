@@ -828,10 +828,10 @@ namespace stan {
                                   rng_t>
             cmd_advi(model,
                      cont_params,
+                     base_rng,
                      grad_samples,
                      elbo_samples,
                      eta_adagrad,
-                     base_rng,
                      eval_elbo,
                      output_samples,
                      &std::cout,
@@ -858,10 +858,10 @@ namespace stan {
                                   rng_t>
             cmd_advi(model,
                      cont_params,
+                     base_rng,
                      grad_samples,
                      elbo_samples,
                      eta_adagrad,
-                     base_rng,
                      eval_elbo,
                      output_samples,
                      &std::cout,
