@@ -1,7 +1,0 @@
-./run_gauss_corr_nuts &  &>/dev/null
-./run_gauss_corr_exhaustion_1 &  &>/dev/null
-./run_gauss_corr_exhaustion_2 &  &>/dev/null
-
-./run_gauss_iid_nuts &  &>/dev/null
-./run_gauss_iid_exhaustion_1 &  &>/dev/null
-./run_gauss_iid_exhaustion_2 &  &>/dev/null
