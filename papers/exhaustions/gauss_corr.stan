@@ -8,7 +8,7 @@ transformed data {
 
   //vector[100] e;
 
-  rho <- 0.9;
+  rho <- 0.95;
   
   for (i in 1:100)
     for (j in 1:100)
