@@ -48,6 +48,7 @@
 #include <stan/services/arguments/arg_method.hpp>
 #include <stan/services/arguments/arg_metric.hpp>
 #include <stan/services/arguments/arg_newton.hpp>
+#include <stan/services/arguments/arg_num_leapfrog.hpp>
 #include <stan/services/arguments/arg_num_samples.hpp>
 #include <stan/services/arguments/arg_num_warmup.hpp>
 #include <stan/services/arguments/arg_nuts.hpp>
@@ -87,6 +88,9 @@
 #include <stan/mcmc/hmc/static/adapt_unit_e_static_hmc.hpp>
 #include <stan/mcmc/hmc/static/adapt_diag_e_static_hmc.hpp>
 #include <stan/mcmc/hmc/static/adapt_dense_e_static_hmc.hpp>
+#include <stan/mcmc/hmc/static_uniform/adapt_unit_e_static_uniform.hpp>
+#include <stan/mcmc/hmc/static_uniform/adapt_diag_e_static_uniform.hpp>
+#include <stan/mcmc/hmc/static_uniform/adapt_dense_e_static_uniform.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_unit_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_diag_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_dense_e_nuts.hpp>
@@ -106,6 +110,7 @@
 #include <stan/services/init/init_nuts.hpp>
 #include <stan/services/init/init_exhaustive.hpp>
 #include <stan/services/init/init_static_hmc.hpp>
+#include <stan/services/init/init_static_uniform.hpp>
 #include <stan/services/init/init_windowed_adapt.hpp>
 #include <stan/services/init/initialize_state.hpp>
 #include <stan/services/io/do_print.hpp>
@@ -554,6 +559,8 @@ namespace stan {
             engine_index = 1;
           } else if (engine->value() == "exhaustive") {
             engine_index = 2;
+          } else if (engine->value() == "static_uniform") {
+            engine_index = 3;
           }
 
           int metric_index = 0;
@@ -599,6 +606,15 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 3: {
+              typedef stan::mcmc::unit_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
 
             case 10: {
               typedef stan::mcmc::diag_e_static_hmc<Model, rng_t> sampler;
@@ -626,6 +642,15 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 13: {
+              typedef stan::mcmc::diag_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
 
             case 20: {
               typedef stan::mcmc::dense_e_static_hmc<Model, rng_t> sampler;
@@ -650,6 +675,15 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              break;
+            }
+              
+            case 23: {
+              typedef stan::mcmc::dense_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
                 return 0;
               break;
             }
@@ -681,6 +715,17 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_adapt<sampler>(sampler_ptr, adapt, cont_params, &std::cout))
+                return 0;
+              break;
+            }
+              
+            case 103: {
+              typedef stan::mcmc::adapt_unit_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
                 return 0;
               if (!init::init_adapt<sampler>(sampler_ptr, adapt, cont_params, &std::cout))
                 return 0;
@@ -719,6 +764,17 @@ namespace stan {
                 return 0;
               break;
             }
+              
+            case 113: {
+              typedef stan::mcmc::adapt_diag_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
+                return 0;
+              break;
+            }
 
             case 120: {
               typedef stan::mcmc::adapt_dense_e_static_hmc<Model, rng_t>
@@ -749,6 +805,18 @@ namespace stan {
               sampler_ptr = new sampler(model, base_rng,
                                         &std::cout, &std::cout);
               if (!init::init_exhaustive<sampler>(sampler_ptr, algo))
+                return 0;
+              if (!init::init_windowed_adapt<sampler>
+                  (sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
+                return 0;
+              break;
+            }
+              
+            case 123: {
+              typedef stan::mcmc::adapt_dense_e_static_uniform<Model, rng_t> sampler;
+              sampler_ptr = new sampler(model, base_rng,
+                                        &std::cout, &std::cout);
+              if (!init::init_static_uniform<sampler>(sampler_ptr, algo))
                 return 0;
               if (!init::init_windowed_adapt<sampler>
                   (sampler_ptr, adapt, num_warmup, cont_params, &std::cout))
