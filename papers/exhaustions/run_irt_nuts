@@ -3,7 +3,9 @@ metric=unit_e engine=nuts max_depth=20 adapt engaged=0 init=0 data file=irt-data
 random seed=2282713988 output file=irt.nuts.csv refresh=10000
 
 ../../bin/print --sig_figs=5 irt.nuts.csv | \
-awk 'NR > 14 && NR < 135 {print $1, $8, $9}' > irt.nuts.ess.dat
+awk 'NR > 15 && NR < 136 {print $1, $8, $9}' > irt.nuts.ess.dat
+
+awk -F, 'NR > 37 && NR < 100039 { print $4, $5, $7}' irt.nuts.csv > irt.nuts.sum.csv
 
 #paste irt.nuts.ess.dat /dev/null irt.exhaustive.1.ess.dat /dev/null irt.exhaustive.2.ess.dat > irt.ess.dat
 

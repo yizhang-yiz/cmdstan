@@ -4,6 +4,8 @@ data file=irt-data.R random seed=2282713988 output file=irt.exhaustive.1.csv \
 refresh=10000
 
 ../../bin/print --sig_figs=5 irt.exhaustive.1.csv | \
-awk 'NR > 14 && NR < 135 {print $1, $8, $9}' > irt.exhaustive.1.ess.dat
+awk 'NR > 15 && NR < 136 {print $1, $8, $9}' > irt.exhaustive.1.ess.dat
+
+awk -F, 'NR > 38 && NR < 100040 { print $4, $5, $7}' irt.exhaustive.1.csv > irt.exhaustive.1.sum.csv
 
 #paste irt.nuts.ess.dat /dev/null irt.exhaustive.1.ess.dat /dev/null irt.exhaustive.2.ess.dat /dev/null irt.exhaustive.3.ess.dat > irt.ess.dat

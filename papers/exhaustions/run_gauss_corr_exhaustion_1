@@ -3,7 +3,9 @@ metric=unit_e engine=exhaustive max_depth=20 x_delta=1.0 adapt engaged=0 init=0 
 random seed=2282713988 output file=gauss_corr.exhaustive.1.csv refresh=10000
 
 ../../bin/print --sig_figs=5 gauss_corr.exhaustive.1.csv | \
-awk 'NR > 14 && NR < 115 {print $1, $8, $9}' > gauss_corr.exhaustive.1.ess.dat
+awk 'NR > 15 && NR < 116 {print $1, $8, $9}' > gauss_corr.exhaustive.1.ess.dat
+
+awk -F, 'NR > 38 && NR < 100040 { print $4, $5, $7}' gauss_corr.exhaustive.1.csv > gauss_corr.exhaustive.1.sum.csv
 
 #paste gauss_corr.nuts.ess.dat /dev/null gauss_corr.exhaustive.1.ess.dat /dev/null gauss_corr.exhaustive.2.ess.dat /dev/null gauss_corr.exhaustive.3.ess.dat > gauss_corr.ess.dat
 
