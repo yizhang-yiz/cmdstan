@@ -131,12 +131,12 @@ namespace stan {
     public:
       null_fstream() {}
     };
-    
+
     template <class Model>
     int command(int argc, const char* argv[]) {
       stan::interface_callbacks::writer::stream_writer info(std::cout);
       stan::interface_callbacks::writer::stream_writer err(std::cout);
-      
+
       std::vector<stan::services::argument*> valid_arguments;
       valid_arguments.push_back(new stan::services::arg_id());
       valid_arguments.push_back(new stan::services::arg_data());
@@ -242,11 +242,14 @@ namespace stan {
 
       Eigen::VectorXd cont_params = Eigen::VectorXd::Zero(model.num_params_r());
 
+      parser.print(info);
+      info();
+      
       if (output_stream) {
         io::write_stan(output_stream, "#");
         io::write_model(output_stream, model.model_name(), "#");
-        parser.print(info);
-        info();
+        interface_callbacks::writer::stream_writer sample_writer(*output_stream, "#");
+        parser.print(sample_writer);
       }
 
       if (diagnostic_stream) {
@@ -781,6 +784,14 @@ namespace stan {
           (parser.arg("method")->arg("variational")
                                ->arg("eta"))->value();
 
+        bool adapt_engaged = dynamic_cast<stan::services::bool_argument*>
+          (parser.arg("method")->arg("variational")->arg("adapt")
+                                                   ->arg("engaged"))->value();
+
+        int adapt_iterations = dynamic_cast<stan::services::int_argument*>
+          (parser.arg("method")->arg("variational")->arg("adapt")
+                                                   ->arg("iter"))->value();
+
         int eval_elbo = dynamic_cast<stan::services::int_argument*>
           (parser.arg("method")->arg("variational")
                                ->arg("eval_elbo"))->value();
@@ -843,16 +854,17 @@ namespace stan {
                                   rng_t>
             cmd_advi(model,
                      cont_params,
+                     base_rng,
                      grad_samples,
                      elbo_samples,
-                     base_rng,
                      eval_elbo,
                      output_samples,
                      subsample,
                      &std::cout,
                      output_stream,
                      diagnostic_stream);
-          cmd_advi.run(eta, tol_rel_obj, max_iterations, tuning_iter);
+          cmd_advi.run(eta, adapt_engaged, adapt_iterations,
+            tol_rel_obj, max_iterations);
         }
 
         if (algo->value() == "meanfield") {
@@ -873,16 +885,17 @@ namespace stan {
                                   rng_t>
             cmd_advi(model,
                      cont_params,
+                     base_rng,
                      grad_samples,
                      elbo_samples,
-                     base_rng,
                      eval_elbo,
                      output_samples,
                      subsample,
                      &std::cout,
                      output_stream,
                      diagnostic_stream);
-          cmd_advi.run(eta, tol_rel_obj, max_iterations, tuning_iter);
+          cmd_advi.run(eta, adapt_engaged, adapt_iterations,
+            tol_rel_obj, max_iterations);
         }
       }
 
