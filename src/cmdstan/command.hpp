@@ -780,7 +780,7 @@ namespace stan {
           (parser.arg("method")->arg("variational")
                                ->arg("tol_rel_obj"))->value();
 
-        std::string eta = dynamic_cast<stan::services::string_argument*>
+        double eta = dynamic_cast<stan::services::real_argument*>
           (parser.arg("method")->arg("variational")
                                ->arg("eta"))->value();
 
@@ -795,11 +795,7 @@ namespace stan {
         int eval_elbo = dynamic_cast<stan::services::int_argument*>
           (parser.arg("method")->arg("variational")
                                ->arg("eval_elbo"))->value();
-
-        int tuning_iter = dynamic_cast<stan::services::int_argument*>
-          (parser.arg("method")->arg("variational")
-                               ->arg("tuning_iter"))->value();
-
+          
         bool subsample = dynamic_cast<stan::services::bool_argument*>
           (parser.arg("method")->arg("variational")
                                ->arg("subsample"))->value();
