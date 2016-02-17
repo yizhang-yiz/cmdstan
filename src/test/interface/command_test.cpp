@@ -5,6 +5,7 @@
 #include <test/utility.hpp>
 #include <stdexcept>
 #include <boost/math/policies/error_handling.hpp>
+#include <stan/interface_callbacks/writer/stream_writer.hpp>
 
 using cmdstan::test::convert_model_path;
 using cmdstan::test::count_matches;
@@ -43,7 +44,6 @@ void test_sample_prints(const std::string& base_cmd) {
 
 void test_optimize_prints(const std::string& base_cmd) {
   std::string cmd(base_cmd);
-  // cmd += " num_samples=100 num_warmup=100";
   std::string cmd_output = run_command(cmd).output;
   // transformed data
   EXPECT_EQ(1, count_matches("x=", cmd_output)); 
@@ -279,7 +279,7 @@ TEST(StanUiCommand, timing_info) {
   output_sstream << output_csv_stream.rdbuf();
   output_csv_stream.close();
   std::string output = output_sstream.str();
-  
+
   EXPECT_EQ(1, count_matches("#  Elapsed Time:", output));
   EXPECT_EQ(1, count_matches(" seconds (Warm-up)", output));
   EXPECT_EQ(1, count_matches(" seconds (Sampling)", output));
@@ -340,7 +340,7 @@ struct sampler {
     return _z;
   }
   
-  void init_stepsize() {
+  void init_stepsize(stan::interface_callbacks::writer::base_writer& writer) {
     throw ExceptionType("throwing exception");
   }
 };
@@ -354,10 +354,12 @@ TYPED_TEST_CASE_P(StanUiCommandException);
 TYPED_TEST_P(StanUiCommandException, init_adapt) {
   sampler<TypeParam> throwing_sampler;
   Eigen::VectorXd cont_params;
+
+  stan::interface_callbacks::writer::stream_writer message_writer(std::cout);
   
   EXPECT_FALSE(stan::services::sample::init_adapt(&throwing_sampler,
                                                   0, 0, 0, 0, cont_params,
-                                                  &std::cout));
+                                                  message_writer));
 }
 
 REGISTER_TYPED_TEST_CASE_P(StanUiCommandException,
