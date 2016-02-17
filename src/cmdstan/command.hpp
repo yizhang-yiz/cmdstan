@@ -844,7 +844,8 @@ namespace stan {
                      grad_samples,
                      elbo_samples,
                      eval_elbo,
-                     output_samples);
+                     output_samples,
+                     subsample);
           cmd_advi.run(eta, adapt_engaged, adapt_iterations,
                        tol_rel_obj, max_iterations,
                        info, sample_writer, diagnostic_writer);
@@ -865,7 +866,8 @@ namespace stan {
                      grad_samples,
                      elbo_samples,
                      eval_elbo,
-                     output_samples);
+                     output_samples,
+                     subsample);
           cmd_advi.run(eta, adapt_engaged, adapt_iterations,
                        tol_rel_obj, max_iterations,
                        info, sample_writer, diagnostic_writer);
