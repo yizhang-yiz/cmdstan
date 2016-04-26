@@ -358,7 +358,7 @@ namespace stan {
             lp = model.template log_prob<false, false>
               (cont_vector, disc_vector, &std::cout);
           } catch (const std::exception& e) {
-            io::write_error_msg(info, e);
+            io::write_error_msg(err, e);
             lp = -std::numeric_limits<double>::infinity();
           }
 
@@ -698,7 +698,7 @@ namespace stan {
                 return 0;
               if (!sample::init_adapt<sampler>(sampler_ptr,
                                                adapt, cont_params,
-                                               info))
+                                               info, err))
                 return 0;
               break;
             }
@@ -710,7 +710,7 @@ namespace stan {
                 return 0;
               if (!sample::init_adapt<sampler>(sampler_ptr,
                                                adapt, cont_params,
-                                               info))
+                                               info, err))
                 return 0;
               break;
             }
@@ -721,7 +721,7 @@ namespace stan {
               if (!sample::init_static_hmc<sampler>(sampler_ptr, algo))
                 return 0;
               if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup,
-                                                        cont_params, info))
+                                                        cont_params, info, err))
                 return 0;
               break;
             }
@@ -732,7 +732,7 @@ namespace stan {
               if (!sample::init_nuts<sampler>(sampler_ptr, algo))
                 return 0;
               if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup,
-                                                        cont_params, info))
+                                                        cont_params, info, err))
                 return 0;
               break;
             }
@@ -744,7 +744,7 @@ namespace stan {
               if (!sample::init_static_hmc<sampler>(sampler_ptr, algo))
                 return 0;
               if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup,
-                                                        cont_params, info))
+                                                        cont_params, info, err))
                 return 0;
               break;
             }
@@ -755,7 +755,7 @@ namespace stan {
               if (!sample::init_nuts<sampler>(sampler_ptr, algo))
                 return 0;
               if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt, num_warmup,
-                                                        cont_params, info))
+                                                        cont_params, info, err))
                 return 0;
               break;
             }
@@ -785,7 +785,7 @@ namespace stan {
                                    s, model, base_rng,
                                    prefix, suffix, std::cout,
                                    startTransitionCallback,
-                                   info);
+                                   info, err);
 
         clock_t end = clock();
         warmDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
@@ -806,7 +806,7 @@ namespace stan {
            s, model, base_rng,
            prefix, suffix, std::cout,
            startTransitionCallback,
-           info);
+           info, err);
 
         end = clock();
         sampleDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
