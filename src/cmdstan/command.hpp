@@ -599,6 +599,8 @@ namespace stan {
                 ->disengage_adaptation();
               writer.write_adapt_finish(sampler_ptr);
             }
+            
+            sample_writer("BEGIN SAMPLES");
   
             // Sampling
             start = clock();
@@ -614,6 +616,8 @@ namespace stan {
             
             end = clock();
             sampleDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+            
+            sample_writer("END SAMPLES");
             
             writer.write_timing(warmDeltaT, sampleDeltaT);
             
