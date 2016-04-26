@@ -109,6 +109,7 @@
 #include <stan/services/optimize/do_bfgs_optimize.hpp>
 #include <stan/services/sample/init_adapt.hpp>
 #include <stan/services/sample/init_nuts.hpp>
+#include <stan/services/sample/init_rb_nuts.hpp>
 #include <stan/services/sample/init_static_hmc.hpp>
 #include <stan/services/sample/init_windowed_adapt.hpp>
 #include <stan/services/sample/generate_transitions.hpp>
@@ -563,11 +564,11 @@ namespace stan {
             sampler_ptr = new sampler(model, base_rng);
             
             // Initialize sampler
-            if (!sample::init_nuts<sampler>(sampler_ptr, algo))
+            if (!sample::init_rb_nuts<sampler>(sampler_ptr, algo))
               return 0;
             if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt,
                                                       num_warmup,
-                                                      cont_params, info))
+                                                      cont_params, info, err))
               return 0;
             
             // Headers
@@ -588,7 +589,7 @@ namespace stan {
                                        s, model, base_rng,
                                        prefix, suffix, std::cout,
                                        startTransitionCallback,
-                                       info);
+                                       info, err);
             
             clock_t end = clock();
             warmDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
@@ -598,7 +599,7 @@ namespace stan {
                 ->disengage_adaptation();
               writer.write_adapt_finish(sampler_ptr);
             }
-            
+  
             // Sampling
             start = clock();
             
@@ -609,7 +610,7 @@ namespace stan {
              s, model, base_rng,
              prefix, suffix, std::cout,
              startTransitionCallback,
-             info);
+             info, err);
             
             end = clock();
             sampleDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
@@ -617,7 +618,22 @@ namespace stan {
             writer.write_timing(warmDeltaT, sampleDeltaT);
             
             if (sampler_ptr)
-            delete sampler_ptr;
+              delete sampler_ptr;
+            
+            if (output_stream) {
+              output_stream->close();
+              delete output_stream;
+            }
+            
+            if (diagnostic_stream) {
+              diagnostic_stream->close();
+              delete diagnostic_stream;
+            }
+            
+            for (size_t i = 0; i < valid_arguments.size(); ++i)
+              delete valid_arguments.at(i);
+            
+            return 0;
           }
 
           if (engine->value() == "static") {
