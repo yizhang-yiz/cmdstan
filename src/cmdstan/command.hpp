@@ -49,6 +49,7 @@
 #include <stan/services/arguments/arg_num_samples.hpp>
 #include <stan/services/arguments/arg_num_warmup.hpp>
 #include <stan/services/arguments/arg_nuts.hpp>
+#include <stan/services/arguments/arg_rb_nuts.hpp>
 #include <stan/services/arguments/arg_optimize.hpp>
 #include <stan/services/arguments/arg_optimize_algo.hpp>
 #include <stan/services/arguments/arg_output.hpp>
@@ -87,6 +88,7 @@
 #include <stan/mcmc/hmc/nuts/adapt_unit_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_diag_e_nuts.hpp>
 #include <stan/mcmc/hmc/nuts/adapt_dense_e_nuts.hpp>
+#include <stan/mcmc/hmc/rb_nuts/adapt_diag_e_rb_nuts.hpp>
 
 #include <stan/model/util.hpp>
 
@@ -102,6 +104,7 @@
 #include <stan/services/io/write_model.hpp>
 #include <stan/services/io/write_stan.hpp>
 #include <stan/services/mcmc/sample.hpp>
+#include <stan/services/mcmc/rb_sample.hpp>
 #include <stan/services/mcmc/warmup.hpp>
 #include <stan/services/optimize/do_bfgs_optimize.hpp>
 #include <stan/services/sample/init_adapt.hpp>
@@ -552,6 +555,70 @@ namespace stan {
           stan::services::list_argument* engine
             = dynamic_cast<stan::services::list_argument*>
               (algo->arg("hmc")->arg("engine"));
+          
+          // Rao-Blackwell Experimental Sampler
+          if (engine->value() == "rb_nuts") {
+            // Create sampler
+            typedef stan::mcmc::adapt_diag_e_rb_nuts<Model, rng_t> sampler;
+            sampler_ptr = new sampler(model, base_rng);
+            
+            // Initialize sampler
+            if (!sample::init_nuts<sampler>(sampler_ptr, algo))
+              return 0;
+            if (!sample::init_windowed_adapt<sampler>(sampler_ptr, adapt,
+                                                      num_warmup,
+                                                      cont_params, info))
+              return 0;
+            
+            // Headers
+            writer.write_sample_names(s, sampler_ptr, model);
+            writer.write_diagnostic_names(s, sampler_ptr, model);
+            
+            std::string prefix = "";
+            std::string suffix = "\n";
+            interface_callbacks::interrupt::noop startTransitionCallback;
+            
+            // Warm-Up
+            clock_t start = clock();
+            
+            
+            mcmc::warmup<Model, rng_t>(sampler_ptr, num_warmup, num_samples,
+                                       num_thin, refresh, save_warmup,
+                                       writer,
+                                       s, model, base_rng,
+                                       prefix, suffix, std::cout,
+                                       startTransitionCallback,
+                                       info);
+            
+            clock_t end = clock();
+            warmDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+            
+            if (adapt_engaged) {
+              dynamic_cast<stan::mcmc::base_adapter*>(sampler_ptr)
+                ->disengage_adaptation();
+              writer.write_adapt_finish(sampler_ptr);
+            }
+            
+            // Sampling
+            start = clock();
+            
+            mcmc::rb_sample<Model, rng_t>
+            (sampler_ptr, num_warmup, num_samples, num_thin,
+             refresh, true,
+             writer,
+             s, model, base_rng,
+             prefix, suffix, std::cout,
+             startTransitionCallback,
+             info);
+            
+            end = clock();
+            sampleDeltaT = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+            
+            writer.write_timing(warmDeltaT, sampleDeltaT);
+            
+            if (sampler_ptr)
+            delete sampler_ptr;
+          }
 
           if (engine->value() == "static") {
             engine_index = 0;
