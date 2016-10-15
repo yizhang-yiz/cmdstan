@@ -2,8 +2,8 @@
 #define CMDSTAN_ARGUMENTS_ARG_DATA_HPP
 
 #include <cmdstan/arguments/categorical_argument.hpp>
-
 #include <cmdstan/arguments/arg_data_file.hpp>
+#include <cmdstan/arguments/arg_data_mass_matrix_file.hpp>
 
 namespace cmdstan {
 
@@ -14,6 +14,7 @@ namespace cmdstan {
       _description = "Input data options";
 
       _subarguments.push_back(new arg_data_file());
+      _subarguments.push_back(new arg_data_mass_matrix_file());
     }
   };
 
