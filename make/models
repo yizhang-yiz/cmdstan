@@ -3,6 +3,7 @@
 ##
 MODEL_HEADER := $(STAN)src/stan/model/model_header.hpp
 CMDSTAN_MAIN := src/cmdstan/main.cpp
+CMDSTAN_MAIN := src/cmdstan/main-mpi.cpp
 
 
 .PRECIOUS: %.hpp %.o

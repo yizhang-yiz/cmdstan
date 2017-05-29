@@ -1,0 +1,17 @@
+CC=clang++
+
+##CFLAGS += -g
+O = 3
+
+CFLAGS+=-Wno-unused-variable -Wno-unused-function
+CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
+
+STANCFLAGS=--allow_undefined
+USER_HEADER=examples/mpi/mpi_defs.hpp
+
+# note: first build cmdstan with the following two lines commented out
+# also: install the two binary boost libraries somewhere and possibly
+# adapt the path to it
+CC=mpicxx
+LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi -lmpi
+
