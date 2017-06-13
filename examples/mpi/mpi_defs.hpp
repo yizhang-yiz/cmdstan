@@ -182,7 +182,7 @@ namespace oral_2cmt_mpi_model_namespace {
     Eigen::Map<Eigen::RowVectorXd>(&res[0], N_world) = final_result_eig.row(0);
 
     for(std::size_t i=0; i != N_world; i++)
-      if(unlikely(final_result_eig(0,i) == std::numeric_limits<double>::quiet_NaN()))
+      if(unlikely(final_result_eig(0,i) == std::numeric_limits<double>::min()))
         throw std::runtime_error("MPI error");
 
     return(res);
@@ -286,7 +286,7 @@ namespace oral_2cmt_mpi_model_namespace {
     for(std::size_t j=0; j != J; j++) {
       for(std::size_t k=0; k != work_map[j][1]; k++) {
         const double val = *(final_result + (M+1) * nc);
-        if(unlikely(val == std::numeric_limits<double>::quiet_NaN()))
+        if(unlikely(val == std::numeric_limits<double>::min()))
           throw std::runtime_error("MPI error");
         
         res.push_back(stan::math::var(new precomputed_gradients_vari(val, M, varis + j * M, final_result + (M+1) * nc + 1)));
@@ -383,7 +383,7 @@ namespace oral_2cmt_mpi_model_namespace {
           // we only abort further processing. The root node will
           // detect unfinished runs and throw. Flag failure with a
           // NaN.
-          local_result(0,0) = std::numeric_limits<double>::quiet_NaN();
+          local_result(0,0) = std::numeric_limits<double>::min();
         }
         
         // sent results to root
