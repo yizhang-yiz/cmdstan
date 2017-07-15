@@ -1,3 +1,7 @@
+#include <iostream>
+#include <tuple>
+#include <string>
+
 #include <boost/mpi.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/access.hpp>
@@ -8,21 +12,26 @@
 #include <boost/math/tools/promotion.hpp>
 #include <boost/random/mersenne_twister.hpp>
 
-#include <iostream>
-
 #include <stan/math.hpp>
+
+// assume the user has defined something like this in data or
+// transformed data (in that order!)
+// real foo:
+// real bar[3];
+// int ind[2];
+typedef std::tuple<double, std::vector<double>, std::vector<int> > static_data;
 
 struct command {
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {}
-  virtual void run() const = 0;
+  virtual void run(const static_data& data) const = 0;
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT( command );
 
 struct null_command : public command {
-  void run() const {}
+  void run(const static_data& data) const {}
 };
 
 
@@ -33,7 +42,7 @@ struct greeter : public command {
   void serialize(Archive & ar, const unsigned int version) {
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(command);
   }
-  void run() const {
+  void run(const static_data& data) const {
     boost::mpi::communicator world;
     std::cout << "Hello world from " << world.rank() << "!" << std::endl;
   }
@@ -41,10 +50,21 @@ struct greeter : public command {
 
 BOOST_CLASS_EXPORT(greeter);
 
+// this struct glues together what user function to call with what
+// element from the static_data tuple
+template <typename F, int A1, int A2>
+struct binary_data_function {
+  double operator()(double param, const static_data& data) {
+    return(F()(param, std::get<A1>(data), std::get<A2>(data)));
+  }
+};
 
+// the actual work to be done on the workers; So the user just defines
+// as usual a normal function which is turned into a usual functor
+// object.
 struct hard_work {
-  double operator()(double a, double b) {
-    return a+b;
+  double operator()(double param, const std::vector<double>& bar, const std::vector<int>& ind) {
+    return param + bar[0];
   }
 };
 
@@ -55,14 +75,17 @@ struct mapped_functor : public command {
   void serialize(Archive & ar, const unsigned int version) {
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(command);
   }
-  void run() const {
+  void run(const static_data& data) const {
     boost::mpi::communicator world;
+    // recieve some parameters here... fix it for now
+    double param = world.rank();
     F fun;
-    std::cout << "Job " << world.rank() << " says " << fun(1, world.rank()) << std::endl;
+    std::cout << "Job " << world.rank() << " says " << fun(param, data) << std::endl;
   }
 };
 
-BOOST_CLASS_EXPORT(mapped_functor<hard_work>);
+typedef binary_data_function<hard_work,1,2> user_data_function;
+BOOST_CLASS_EXPORT(mapped_functor<user_data_function>);
 
 
 struct killer : public command {
@@ -72,7 +95,7 @@ struct killer : public command {
     //ar & boost::serialization::base_object<command>(*this);
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(command);
   }
-  void run() const {
+  void run(const static_data& data) const {
     boost::mpi::communicator world;
     std::cout << "Terminating worker " << world.rank() << std::endl;
     MPI_Finalize();
@@ -88,6 +111,11 @@ int main(int argc, char* argv[])
   boost::mpi::environment env(argc, argv);
   boost::mpi::communicator world;
 
+  double foo = 10.;
+  std::vector<double> bar(3, 5.);
+  std::vector<int> ind(2, 1);
+  static_data user_data = make_tuple(foo, bar, ind);
+
   std::cout << "Started worker " << world.rank() << std::endl;
   
   if(world.rank() != 0) {
@@ -96,7 +124,7 @@ int main(int argc, char* argv[])
 
       boost::mpi::broadcast(world, work, 0);
 
-      work->run();
+      work->run(user_data);
     }
   }
 
@@ -104,11 +132,11 @@ int main(int argc, char* argv[])
   
   boost::mpi::broadcast(world, hello, 0);
 
-  hello->run();
+  hello->run(user_data);
 
-  typedef mapped_functor<hard_work> hard_work_t;
+  typedef mapped_functor<user_data_function> user_work_t;
   
-  boost::shared_ptr<command> work(new hard_work_t);
+  boost::shared_ptr<command> work(new user_work_t);
 
   boost::mpi::broadcast(world, work, 0);
 
