@@ -1,0 +1,9 @@
+
+This branch contains the very first prototype of MPI enabled
+within-chain parallelization and the second generation which uses a
+more mature code base.
+
+The second generation requires use of the stan-math branch
+feature/concept-mpi. This version uses the files marked with a "2" in
+their file names (oral_2cmt_mpi2.stan and mpi_defs2.hpp in
+examples/mpi).

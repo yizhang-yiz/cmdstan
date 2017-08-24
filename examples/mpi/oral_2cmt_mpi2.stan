@@ -39,14 +39,12 @@ functions {
                                       0, x_r[2:(T+1)],
                                       theta[4:7],
                                       x_r[1:1], x_i,
-                                      1E-10, 1E-10, 5000);
+                                      1E-7, 1E-7, 1000);
 
     return(run[:,2]);
   }
 
-  real[] run_mpi_function(real[,] Theta, int[,] world_map, real[,] X_r, int[,] X_i);
-
-  int[,] setup_mpi_function(real[,] Theta_0, real[,] X_r, int[,] X_i);
+  real[] run_mpi_function(real[,] Theta, real[,] X_r, int[,] X_i);
 
   real[] integrate_oral_2cmt_serial(real[,] Theta, 
                                     int[] M,
@@ -63,7 +61,7 @@ functions {
                               0, time,
                               Theta[j,4:7],
                               x_r[j], x_i[j],
-                              1E-10, 1E-10, 5000);
+                              1E-7, 1E-7, 1000);
 
       for(m in 1:M[j])
         res[cj + m - 1] = run[m,2];
@@ -82,6 +80,7 @@ data {
   real<lower=0> dose;
   int<lower=1> worker;
   real<lower=1> scale;
+  int<lower=0,upper=1> use_mpi;
 }
 transformed data {
   real state0[J,3];
@@ -91,9 +90,6 @@ transformed data {
   real x_r[J,1+T];
   int x_i[J,1];
   vector[J] yobs_T;
-  int world_map[J,2];
-  int chunks[worker];
-  int chunks_sizes[worker];
   int<lower=0,upper=1> parallel = worker > 1 ? 1 : 0;
   real Theta_0[J,7];
 
@@ -117,23 +113,21 @@ transformed data {
 
   yobs_T = rep_vector(100., J);
 
-  world_map = setup_mpi_function(Theta_0, x_r, x_i);
+  // obsolete as we distribute the data once
+  //world_map = setup_mpi_function(Theta_0, x_r, x_i);
 
   if(parallel) {
     print("Parallel ODE integration using MPI.");
   } else {
     print("Serial ODE integration.");
   }
-
-  chunks = rep_array(0, worker);
-  chunks_sizes = rep_array(0, worker);
-  for(j in 1:J) {
-    chunks[world_map[j][1]] = 1 + chunks[world_map[j][1]];
-    chunks_sizes[world_map[j][1]] = world_map[j][2] + chunks_sizes[world_map[j][1]];
+  
+  if(use_mpi) {
+    print("Using MPI.");
+  } else {
+    print("Not using MPI.");
   }
 
-  print("chunks size assignment is: ", chunks);
-  print("chunks output sizes are  : ", chunks_sizes);
 }
 parameters {
   real<lower=0> theta_v[4];
@@ -157,8 +151,8 @@ model {
     Theta[j,4:7] = theta_v;
   }
   
-  if(parallel) {
-    yhat = run_mpi_function(Theta, world_map, x_r, x_i);
+  if(use_mpi) {
+    yhat = run_mpi_function(Theta, x_r, x_i);
   } else {
     yhat = integrate_oral_2cmt_serial(Theta, M, time[1:T], x_r, x_i);
   }
