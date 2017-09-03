@@ -1,3 +1,4 @@
+
 CC=icpc
 
 CFLAGS +=-std=c++11

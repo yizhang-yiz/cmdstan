@@ -149,65 +149,75 @@ functions {
     real k12;
     real k21;
     real k10;
-    real dose = x_r[1];
 
     ka = theta[1];
     k10 = theta[2];
     k12 = theta[3];
     k21 = theta[4];
 
-    ## we add a dose at t=24 within about 0.5 time units
-    dydt[1] = -ka * y[1]; ## + dose * exp(normal_lpdf(t | 24, 0.5/4.));
+    dydt[1] = -ka * y[1];
     dydt[2] =  ka * y[1] - (k10 + k12) * y[2] + k21 * y[3];
     dydt[3] =  k12 * y[2] - k21 * y[3];
     return(dydt);
   }
 
   
-  real[] mpi_function(real[] theta, real[] x_r, int[] x_i) {
+  real[] mpi_function(real[] eta, real[] theta, real[] x_r, int[] x_i) {
     int T = x_i[1];
     int use_ode = x_i[2];
+    int use_shared = x_i[3];
     real run[1];
+    real state0[3];
+    real theta_run[4];
+    
+    state0[1] = theta[1];
+    state0[2] = 0;
+    state0[3] = 0;
+
+    if(use_shared) {
+      theta_run = eta;
+    } else {
+      theta_run = theta[2:5];
+    }
 
     if(use_ode) {
       real run2[T,3] = integrate_ode_bdf(twoCmtOral_ode,
-                                         theta[1:3], 
+                                         state0, 
                                          0, x_r[2:(T+1)],
-                                         theta[4:7],
-                                         x_r[1:1], x_i,
+                                         theta_run,
+                                         x_r[1:0], x_i,
                                          1E-7, 1E-7, 1000);
       run[1] = run2[T,2];
     } else {
-      real run2[T] = twoCmtOral_analytic(theta[1], x_r[2:(T+1)], theta[4:7]);
+      real run2[T] = twoCmtOral_analytic(theta[1], x_r[2:(T+1)], theta_run);
       run[1] = run2[T];
     }
 
     return(run);
   }
 
-  real[] run_mpi_function(real[,] Theta, real[,] X_r, int[,] X_i);
+  real mpi_function_sum(real[] eta, real[] theta, real[] x_r, int[] x_i) {
+    return(normal_lpdf(x_r[1]| mpi_function(eta, theta, x_r, x_i)[1], 5));
+  }
 
-  real[] integrate_oral_2cmt_serial(real[,] Theta, 
-                                    int[] M,
-                                    real[] time,
-                                    real[,] x_r, int[,] x_i) {
+  real[] run_mpi_function(real[] eta, real[,] Theta, real[,] X_r, int[,] X_i);
+  real run_mpi_function_sum(real[] eta, real[,] Theta, real[,] X_r, int[,] X_i);
+
+  real[] run_mpi_function_serial(real[] eta,
+                                 real[,] Theta, 
+                                 int[] M,
+                                 real[,] x_r, int[,] x_i) {
     int J = size(M);
-    real res[J];
+    real res[sum(M)];
     int cj;
     cj = 1;
     for(j in 1:J) {
-      real run[M[j],3];
-      run = integrate_ode_bdf(twoCmtOral_ode,
-                              Theta[j,1:3],
-                              0, time,
-                              Theta[j,4:7],
-                              x_r[j], x_i[j],
-                              1E-7, 1E-7, 1000);
+      real run[M[j]];
 
-      //for(m in 1:M[j])
-      //  res[cj + m - 1] = run[m,2];
-
-      res[j] = run[M[j],2];
+      run = mpi_function(eta, Theta[j], x_r[j], x_i[j]);
+      
+      for(m in 1:M[j])
+        res[cj + m - 1] = run[m];
 
       cj = cj + M[j];
     }
@@ -215,75 +225,56 @@ functions {
     return(res);
   }
 
-  real integrate_oral_2cmt_serial_lpdf(real[] yobs_T,
-                                       real[,] Theta, 
-                                       int[] M,
-                                       real[] time,
-                                       real[,] x_r, int[,] x_i) {
-    int J = size(M);
+  real run_mpi_function_sum_serial(real[] eta,
+                                   real[,] Theta, 
+                                   real[,] x_r, int[,] x_i) {
+    int J = size(Theta);
     real res[J];
-    int cj;
-    cj = 1;
     for(j in 1:J) {
-      real run[M[j],3];
-      run = integrate_ode_bdf(twoCmtOral_ode,
-                              Theta[j,1:3],
-                              0, time,
-                              Theta[j,4:7],
-                              x_r[j], x_i[j],
-                              1E-7, 1E-7, 1000);
-
-      //for(m in 1:M[j])
-      //  res[cj + m - 1] = run[m,2];
-
-      res[j] = run[M[j],2];
-
-      cj = cj + M[j];
+      res[j] = mpi_function_sum(eta, Theta[j], x_r[j], x_i[j]);
     }
 
-    return(normal_lpdf(yobs_T | res, 5));
+    return(sum(res));
   }
 }
 data {
   int<lower=1> T;
   int<lower=1> J;
-  real<lower=0> theta[4];
-  real<lower=0> theta_sd[4];
+  real<lower=0> eta[4];
+  real<lower=0> eta_sd[4];
   real<lower=0> dose;
   real<lower=1> scale;
   int<lower=0,upper=1> use_mpi;
   int<lower=0,upper=1> use_ode;
+  int<lower=0,upper=1> use_shared;
+  int<lower=0,upper=1> use_sum;
 }
 transformed data {
-  real state0[J,3];
   real t0[J];
   real time[T*J];
   int M[J];
   real x_r[J,1+T];
-  int x_i[J,2];
+  int x_i[J,3];
   real yobs_T[J];
-  real Theta_0[J,7];
+
+  yobs_T = rep_array(100., J);
 
   for(j in 1:J) {
-    state0[j,1] = dose + j - 1;
-    state0[j,2] = 0;
-    state0[j,3] = 0;
+    yobs_T[j] = 1 + dose + j - 1;
 
-    x_r[j,1] = dose + j - 1;
+    x_r[j,1] = yobs_T[j];
     x_r[j,2:T+1] = to_array_1d(seq_int(1, T));
     x_r[j,2:T+1] = to_array_1d(to_vector(x_r[j,2:T+1]) * scale);
+
     x_i[j,1] = T;
     x_i[j,2] = use_ode;
+    x_i[j,3] = use_shared;
 
     t0[j] = 0;
-    M[j] = T;
-
-    Theta_0[j] = rep_array(1.0, 7);
+    M[j] = 1;
 
     time[(j-1) * T + 1 : j * T] = to_array_1d(to_vector(seq_int(1, T)) * scale);
   }
-
-  yobs_T = rep_array(100., J);
 
   // obsolete as we distribute the data once
   //world_map = setup_mpi_function(Theta_0, x_r, x_i);
@@ -300,45 +291,90 @@ transformed data {
   } else {
     print("Using analytic solution.");
   }
+  if(use_shared) {
+    print("Using shared parameters.");
+  } else {
+    print("Not using shared parameters.");
+  }
+  if(use_sum) {
+    print("Using direct aggregation.");
+  } else {
+    print("Not using direct aggregation.");
+  }
 
 }
 parameters {
-  real<lower=0> theta_v[4];
-  real<lower=0> dose0_v[J];
+  real log_eta_v[4];
+  real log_dose0_v[J];
 }
 transformed parameters {
-  
+  real eta_v[4];
+  real dose0_v[J];
+  eta_v = exp(log_eta_v);
+  dose0_v = exp(log_dose0_v);
   //print("yhat = ", yhat);
   
   //reject("OK, we are good for now");
 }
 model {
-  real conc_T[J];
-  //real yhat[sum(M)];
-  real Theta[J,7];
 
-  for(j in 1:J) {
-    Theta[j,1] = dose0_v[j];
-    Theta[j,2] = 0;
-    Theta[j,3] = 0;
-    Theta[j,4:7] = theta_v;
-  }
-  
-  if(use_mpi) {
-    conc_T = run_mpi_function(Theta, x_r, x_i);
+  if(use_shared) {
+    real Theta[J,1];
+
+    for(j in 1:J) {
+      Theta[j,1] = dose0_v[j];
+    }
+
+    if(use_sum) {
+      if(use_mpi) {
+        target += run_mpi_function_sum(eta_v, Theta, x_r, x_i);
+      } else {
+        target += run_mpi_function_sum_serial(eta_v, Theta, x_r, x_i);
+      }
+    } else {
+      real conc_T[J];
+      if(use_mpi) {
+        conc_T = run_mpi_function(eta_v, Theta, x_r, x_i);
+      } else {
+        conc_T = run_mpi_function_serial(eta_v, Theta, M, x_r, x_i);
+      }
+      target += normal_lpdf(yobs_T | conc_T, 5);     
+    }
   } else {
-    conc_T = integrate_oral_2cmt_serial(Theta, M, time[1:T], x_r, x_i);
+    real eta0[0];
+    real Theta[J,5];
+
+    for(j in 1:J) {
+      Theta[j,1] = dose0_v[j];
+      Theta[j,2:5] = eta_v;
+    }
+  
+    if(use_sum) {
+      if(use_mpi) {
+        target += run_mpi_function_sum(eta0, Theta, x_r, x_i);
+      } else {
+        target += run_mpi_function_sum_serial(eta0, Theta, x_r, x_i);
+      }
+    } else {
+      real conc_T[J];
+      if(use_mpi) {
+        conc_T = run_mpi_function(eta0, Theta, x_r, x_i);
+      } else {
+        conc_T = run_mpi_function_serial(eta0, Theta, M, x_r, x_i);
+      }
+      target += normal_lpdf(yobs_T | conc_T, 5);     
+    }
   }
 
   //for(j in 1:J)
   //conc_T[j] = yhat[(j-1) * T + T];
   //print("conc_T = ", conc_T);
 
-  theta_v ~ lognormal(log(theta), theta_sd);
+  log_eta_v ~ normal(log(eta), eta_sd);
 
-  dose0_v ~ lognormal(log(10.), 0.2);
+  log_dose0_v ~ normal(log(10.), 0.2);
 
-  target += normal_lpdf(yobs_T | conc_T, 5);
+
 }
 generated quantities {
   /*
