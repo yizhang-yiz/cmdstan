@@ -39,7 +39,7 @@ functions {
                                       0, x_r[2:(T+1)],
                                       theta[4:7],
                                       x_r[1:1], x_i,
-                                      1E-9, 1E-5, 1000);
+                                      1E-10, 1E-10, 5000);
 
     return(run[:,2]);
   }
@@ -63,7 +63,7 @@ functions {
                               0, time,
                               Theta[j,4:7],
                               x_r[j], x_i[j],
-                              1E-9, 1E-5, 1000);
+                              1E-10, 1E-10, 5000);
 
       for(m in 1:M[j])
         res[cj + m - 1] = run[m,2];

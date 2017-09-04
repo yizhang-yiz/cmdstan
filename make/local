@@ -1,17 +1,36 @@
-CC=clang++
 
-##CFLAGS += -g
+CC=icpc
+
+CFLAGS +=-std=c++11
 O = 3
 
 CFLAGS+=-Wno-unused-variable -Wno-unused-function
-CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
+##CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 
 STANCFLAGS=--allow_undefined
-USER_HEADER=examples/mpi/mpi_defs.hpp
+USER_HEADER=examples/mpi/mpi_defs2.hpp
+
+MATH=$(HOME)/libs/math/
 
 # note: first build cmdstan with the following two lines commented out
 # also: install the two binary boost libraries somewhere and possibly
 # adapt the path to it
-CC=mpicxx
-LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi -lmpi
+#CC=mpicxx
 
+## install from boost 1.62.0 the serialization and mpi library as
+## shared libraries installed into an appropiate localtion and adapt
+
+CC=mpic++
+LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
+
+##LDFLAGS += $(HOME)/local/lib/libboost_serialization.a $(HOME)/local/lib/libboost_mpi.a 
+#LDFLAGS += -L$(HOME)/local/lib -lboost_serialization  $(HOME)/local/lib/libboost_mpi.a 
+#LDFLAGS += $(HOME)/local/lib/libboost_serialization.a -L$(HOME)/local/lib -lboost_mpi
+
+##CFLAGS +=-DBOOST_MPI_STATIC_LINK=1 -DBOOST_MPI_DECL=BOOST_SYMBOL_IMPORT
+
+# mpic++ --showme
+# g++ -I/usr/include/openmpi-x86_64 -pthread -Wl,-rpath -Wl,/usr/lib64/openmpi/lib -Wl,--enable-new-dtags -L/usr/lib64/openmpi/lib -lmpi_cxx -lmpi
+
+#CFLAGS+=-I/usr/include/openmpi-x86_64
+#LDFLAGS+=-pthread -Wl,-rpath -Wl,/usr/lib64/openmpi/lib -Wl,--enable-new-dtags -L/usr/lib64/openmpi/lib -lmpi_cxx -lmpi -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
