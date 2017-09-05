@@ -8,7 +8,7 @@
 struct mpi_apply {
   template<typename T>
   static
-  std::vector<T> apply(std::vector<T> eta, std::vector<T> theta, std::vector<double> x_r, std::vector<int> x_i) {
+  std::vector<T> apply(const std::vector<T>& eta, const std::vector<T>& theta, const std::vector<double>& x_r, const std::vector<int>& x_i) {
     return oral_2cmt_mpi2_model_namespace::mpi_function(eta, theta, x_r, x_i, 0);
   }
 };
@@ -16,7 +16,7 @@ struct mpi_apply {
 struct mpi_apply_sum {
   template<typename T>
   static
-  T apply(std::vector<T> eta, std::vector<T> theta, std::vector<double> x_r, std::vector<int> x_i) {
+  T apply(const std::vector<T>& eta, const std::vector<T>& theta, const std::vector<double>& x_r, const std::vector<int>& x_i) {
     return oral_2cmt_mpi2_model_namespace::mpi_function_sum(eta, theta, x_r, x_i, 0);
   }
 };
