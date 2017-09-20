@@ -9,7 +9,7 @@ struct mpi_apply {
   template<typename T>
   static
   std::vector<T> apply(const std::vector<T>& eta, const std::vector<T>& theta, const std::vector<double>& x_r, const std::vector<int>& x_i) {
-    return oral_2cmt_mpi2_model_namespace::mpi_function(eta, theta, x_r, x_i, 0);
+    return mpi_model_namespace::mpi_function(eta, theta, x_r, x_i, 0);
   }
 };
 
@@ -17,12 +17,11 @@ struct mpi_apply_sum {
   template<typename T>
   static
   T apply(const std::vector<T>& eta, const std::vector<T>& theta, const std::vector<double>& x_r, const std::vector<int>& x_i) {
-    return oral_2cmt_mpi2_model_namespace::mpi_function_sum(eta, theta, x_r, x_i, 0);
+    return mpi_model_namespace::mpi_function_sum(eta, theta, x_r, x_i, 0);
   }
 };
 
-namespace oral_2cmt_mpi2_model_namespace {
-
+namespace mpi_model_namespace {
 
   template <typename T0__, typename T1__, typename T2__>
   std::vector<typename boost::math::tools::promote_args<T0__, T1__, T2__>::type>
@@ -44,20 +43,21 @@ namespace oral_2cmt_mpi2_model_namespace {
 
 }
 
-
-BOOST_CLASS_EXPORT(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_data>)
-BOOST_CLASS_TRACKING(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_data>,track_never)
-BOOST_SERIALIZATION_FACTORY_0(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_data>)
+/*
+BOOST_CLASS_EXPORT(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_data>)
+BOOST_CLASS_TRACKING(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_data>,track_never)
+BOOST_SERIALIZATION_FACTORY_0(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_data>)
+*/
 
 // argh: class names must be shorter than 128 characters. Otherwise
 // boost::serialization throws an exception
-BOOST_CLASS_EXPORT(stan::math::distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >)
-BOOST_CLASS_TRACKING(stan::math::distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >,track_never)
-BOOST_SERIALIZATION_FACTORY_0(stan::math::distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >)
+BOOST_CLASS_EXPORT(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >)
+BOOST_CLASS_TRACKING(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >,track_never)
+BOOST_SERIALIZATION_FACTORY_0(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect<mpi_apply> >)
 
-BOOST_CLASS_EXPORT(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >)
-BOOST_CLASS_TRACKING(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >,track_never)
-BOOST_SERIALIZATION_FACTORY_0(stan::math::distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >)
+BOOST_CLASS_EXPORT(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >)
+BOOST_CLASS_TRACKING(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >,track_never)
+BOOST_SERIALIZATION_FACTORY_0(stan::math::mpi_distributed_apply<stan::math::internal::distributed_map_rect_lpdf<mpi_apply_sum> >)
 
 
 /* does not help for an attempt to get static linking working
