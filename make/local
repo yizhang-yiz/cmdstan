@@ -1,16 +1,17 @@
 
-CC=icpc
+CC=clang++
 
-CFLAGS +=-std=c++11
+#CXXFLAGS +=-std=c++11
 O = 3
 
-CFLAGS+=-Wno-unused-variable -Wno-unused-function
+CXXFLAGS+=-Wno-unused-variable -Wno-unused-function
 ##CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 
-STANCFLAGS=--allow_undefined
+STANCFLAGS=--allow_undefined --name=mpi_model
 USER_HEADER=examples/mpi/mpi_defs2.hpp
+##OUTPUT_OPTION=--name=mpi_model
 
-MATH=$(HOME)/libs/math/
+MATH=$(HOME)/work/math/
 
 # note: first build cmdstan with the following two lines commented out
 # also: install the two binary boost libraries somewhere and possibly
@@ -20,8 +21,14 @@ MATH=$(HOME)/libs/math/
 ## install from boost 1.62.0 the serialization and mpi library as
 ## shared libraries installed into an appropiate localtion and adapt
 
-CC=mpic++
+#CC=mpic++
+
 LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
+
+## from mpicxx --showme
+LDFLAGS += -L/opt/local/lib/openmpi-mp -lmpi_cxx -lmpi
+CXXFLAGS += -I/opt/local/include/openmpi-mp
+
 
 ##LDFLAGS += $(HOME)/local/lib/libboost_serialization.a $(HOME)/local/lib/libboost_mpi.a 
 #LDFLAGS += -L$(HOME)/local/lib -lboost_serialization  $(HOME)/local/lib/libboost_mpi.a 
