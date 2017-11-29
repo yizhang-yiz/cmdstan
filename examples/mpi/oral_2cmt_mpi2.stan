@@ -197,7 +197,37 @@ functions {
   }
 
   real mpi_function_sum(real[] eta, real[] theta, real[] x_r, int[] x_i) {
-    return(normal_lpdf(x_r[1]| mpi_function(eta, theta, x_r, x_i)[1], 5));
+    int T = x_i[1];
+    int use_ode = x_i[2];
+    int use_shared = x_i[3];
+    real run;
+    real state0[3];
+    real theta_run[4];
+    
+    state0[1] = theta[1];
+    state0[2] = 0;
+    state0[3] = 0;
+
+    if(use_shared) {
+      theta_run = eta;
+    } else {
+      theta_run = theta[2:5];
+    }
+
+    if(use_ode) {
+      real run2[T,3] = integrate_ode_bdf(twoCmtOral_ode,
+                                         state0, 
+                                         0, x_r[2:(T+1)],
+                                         theta_run,
+                                         x_r[1:0], x_i,
+                                         1E-7, 1E-7, 1000);
+      run = run2[T,2];
+    } else {
+      real run2[T] = twoCmtOral_analytic(theta[1], x_r[2:(T+1)], theta_run);
+      run = run2[T];
+    }
+
+    return(normal_lpdf(x_r[1]| run, 5));
   }
 
   real[] run_mpi_function(real[] eta, real[,] Theta, real[,] X_r, int[,] X_i);
