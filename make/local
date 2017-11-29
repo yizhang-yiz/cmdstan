@@ -1,14 +1,17 @@
+BOOST=~/local/boost_1_65_1
 
-CC=clang++
+#CC=clang++
+CC=g++-mp-6
+CXX=g++-mp-6
 
-#CXXFLAGS +=-std=c++11
+#CXXFLAGS +=-std=c++14
 O = 3
 
 CXXFLAGS+=-Wno-unused-variable -Wno-unused-function
 ##CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 
 STANCFLAGS=--allow_undefined --name=mpi_model
-USER_HEADER=examples/mpi/mpi_defs2.hpp
+USER_HEADER=examples/mpi/mpi_defs3.hpp
 ##OUTPUT_OPTION=--name=mpi_model
 
 MATH=$(HOME)/work/math/
@@ -18,10 +21,12 @@ MATH=$(HOME)/work/math/
 # adapt the path to it
 #CC=mpicxx
 
-## install from boost 1.62.0 the serialization and mpi library as
+## install from boost 1.65.0 the serialization and mpi library as
 ## shared libraries installed into an appropiate localtion and adapt
 
 #CC=mpic++
+
+CXXFLAGS+=-DSTAN_HAS_MPI -I~/local/boost_1_65_1
 
 LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
 
