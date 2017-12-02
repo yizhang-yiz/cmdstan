@@ -186,7 +186,7 @@ functions {
                                          0, x_r[2:(T+1)],
                                          theta_run,
                                          x_r[1:0], x_i,
-                                         1E-7, 1E-7, 1000);
+                                         1E-5, 1E-7, 1000);
       run[1] = run2[T,2];
     } else {
       real run2[T] = twoCmtOral_analytic(theta[1], x_r[2:(T+1)], theta_run);
