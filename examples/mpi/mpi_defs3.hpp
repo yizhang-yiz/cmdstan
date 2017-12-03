@@ -25,10 +25,10 @@ namespace mpi_model_namespace {
            const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
            const std::vector<std::vector<T2__> >& X_r,
            const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
-    return stan::math::map_rect<mpi_call>(eta, Theta, X_r, X_i, 0);
+    return stan::math::map_rect<0,mpi_call>(eta, Theta, X_r, X_i);
   }
 }
 
-STAN_REGISTER_MPI_MAP_RECT(mpi_call, double, double)
-STAN_REGISTER_MPI_MAP_RECT(mpi_call, var, var)
+STAN_REGISTER_MPI_MAP_RECT(0, mpi_call, double, double)
+STAN_REGISTER_MPI_MAP_RECT(0, mpi_call, var, var)
 
