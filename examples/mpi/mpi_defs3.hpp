@@ -6,17 +6,6 @@
 #include <stan/math/rev/mat/functor/map_rect_reduce.hpp>
 #include <stan/math/prim/mat/functor/mpi_parallel_call.hpp>
 
-struct mpi_call {
-    template <typename T0__, typename T1__, typename T2__>
-        Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__>::type, Eigen::Dynamic,1>
-    operator()(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& eta,
-                 const Eigen::Matrix<T1__, Eigen::Dynamic,1>& theta,
-                 const std::vector<T2__>& x_r,
-                 const std::vector<int>& x_i) const {
-      return mpi_model_namespace::mpi_function(eta, theta, x_r, x_i, 0);
-    }
-};
-
 namespace mpi_model_namespace {
 
   template <typename T0__, typename T1__, typename T2__>
@@ -25,10 +14,10 @@ namespace mpi_model_namespace {
            const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
            const std::vector<std::vector<T2__> >& X_r,
            const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
-    return stan::math::map_rect<0,mpi_call>(eta, Theta, X_r, X_i);
+    return stan::math::map_rect<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
   }
+  
 }
 
-STAN_REGISTER_MPI_MAP_RECT(0, mpi_call, double, double)
-STAN_REGISTER_MPI_MAP_RECT(0, mpi_call, var, var)
+STAN_REGISTER_MPI_MAP_RECT_ALL(0, mpi_model_namespace::mpi_function_functor__)
 
