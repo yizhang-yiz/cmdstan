@@ -196,12 +196,13 @@ functions {
     return(run);
   }
 
-  vector map_rect(vector eta, vector[] Theta, real[,] X_r, int[,] X_i);
+  vector map_rect_mpi(vector eta, vector[] Theta, real[,] X_r, int[,] X_i);
+  vector map_rect_serial(vector eta, vector[] Theta, real[,] X_r, int[,] X_i);
 
-  vector map_rect_serial(vector eta,
-                         vector[] Theta, 
-                         int[] M,
-                         real[,] x_r, int[,] x_i) {
+  vector map_rect_stan(vector eta,
+                       vector[] Theta, 
+                       int[] M,
+                       real[,] x_r, int[,] x_i) {
     int J = size(M);
     vector[sum(M)] res;
     int cj;
@@ -227,7 +228,7 @@ data {
   real<lower=0> eta_sd[4];
   real<lower=0> dose;
   real<lower=1> scale;
-  int<lower=0,upper=1> use_mpi;
+  int<lower=0,upper=2> use_map_rect;
   int<lower=0,upper=1> use_ode;
   int<lower=0,upper=1> use_shared;
 }
@@ -263,10 +264,24 @@ transformed data {
 
   print("Problem size J = ", J);
   
-  if(use_mpi) {
-    print("Using MPI.");
-  } else {
-    print("Not using MPI.");
+  if(use_map_rect == 0) {
+    print("Using map_rect_mpi.");
+    /*
+    print("CACHING data NOW.");
+    {
+      vector[1] Theta_d[J];
+      vector[J] conc_T_d;
+
+      for(j in 1:J) {
+        Theta_d[j,1] = yobs_T[j];
+      }
+      conc_T_d = map_rect_mpi(to_vector(eta), Theta_d, x_r, x_i);
+    }
+    */
+  } else if(use_map_rect == 1) {
+    print("Using map_rect_serial.");
+  } else if(use_map_rect == 2) {
+    print("Using map_rect_stan.");
   }
   if(use_ode) {
     print("Using ODE integration.");
@@ -302,10 +317,12 @@ model {
       Theta[j,1] = dose0_v[j];
     }
 
-    if(use_mpi) {
-      conc_T = map_rect(eta_v, Theta, x_r, x_i);
+    if(use_map_rect == 0) {
+      conc_T = map_rect_mpi(eta_v, Theta, x_r, x_i);
+    } else if(use_map_rect == 1) {
+      conc_T = map_rect_serial(eta_v, Theta, x_r, x_i);
     } else {
-      conc_T = map_rect_serial(eta_v, Theta, M, x_r, x_i);
+      conc_T = map_rect_stan(eta_v, Theta, M, x_r, x_i);
     }
     target += normal_lpdf(yobs_T | conc_T, 5);     
   } else {
@@ -318,10 +335,12 @@ model {
       Theta[j,2:5] = eta_v;
     }
   
-    if(use_mpi) {
-      conc_T = map_rect(eta0, Theta, x_r, x_i);
+    if(use_map_rect == 0) {
+      conc_T = map_rect_mpi(eta0, Theta, x_r, x_i);
+    } else if(use_map_rect == 1) {
+      conc_T = map_rect_serial(eta0, Theta, x_r, x_i);
     } else {
-      conc_T = map_rect_serial(eta0, Theta, M, x_r, x_i);
+      conc_T = map_rect_stan(eta0, Theta, M, x_r, x_i);
     }
     target += normal_lpdf(yobs_T | conc_T, 5);     
   }
@@ -333,8 +352,8 @@ model {
   log_eta_v ~ normal(log(eta), eta_sd);
 
   log_dose0_v ~ normal(log(10.), 0.2);
-
-
+ 
+  //print("Target = ", target());  
 }
 generated quantities {
   /*

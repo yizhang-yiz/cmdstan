@@ -10,11 +10,20 @@ namespace mpi_model_namespace {
 
   template <typename T0__, typename T1__, typename T2__>
   Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__>::type, Eigen::Dynamic, 1>
-  map_rect(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& eta,
-           const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
-           const std::vector<std::vector<T2__> >& X_r,
-           const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
-    return stan::math::map_rect<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
+  map_rect_mpi(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& eta,
+               const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
+               const std::vector<std::vector<T2__> >& X_r,
+               const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
+    return stan::math::map_rect_mpi<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
+  }
+  
+  template <typename T0__, typename T1__, typename T2__>
+  Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__>::type, Eigen::Dynamic, 1>
+  map_rect_serial(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& eta,
+               const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
+               const std::vector<std::vector<T2__> >& X_r,
+               const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
+    return stan::math::map_rect_serial<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
   }
   
 }
