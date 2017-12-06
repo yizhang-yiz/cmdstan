@@ -32,6 +32,7 @@ functions {
     // log(k+k12+k21)
     lkSum = log_sum_exp(lk);
 
+    
     mm[1] = lka;
 
     // check that discriminat is for all patients real, i.e. that 
@@ -52,7 +53,8 @@ functions {
 
     return(mm);
   }
-
+ 
+  
   matrix pk_oral_2cmt(vector state0, vector Dt,
                       real lka, real lalphaR, real lbetaR, real lA, real lB) {
     real lstateRefOral; // ref state for the 2-cmt with oral cmt (only the oral cmt)
@@ -216,7 +218,7 @@ functions {
         res[cj + m - 1] = run[m];
 
       cj = cj + M[j];
-    }
+    } 
 
     return(res);
   }
@@ -258,7 +260,7 @@ transformed data {
 
     time[(j-1) * T + 1 : j * T] = to_array_1d(to_vector(seq_int(1, T)) * scale);
   }
-
+ 
   // obsolete as we distribute the data once
   //world_map = setup_mpi_function(Theta_0, x_r, x_i);
 

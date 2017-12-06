@@ -19,10 +19,12 @@ CXXFLAGS+=-Wno-unused-variable -Wno-unused-function
 ##CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 
 STANCFLAGS=--allow_undefined --name=mpi_model
-USER_HEADER=examples/mpi/mpi_defs3.hpp
-##OUTPUT_OPTION=--name=mpi_model
 
+USER_HEADER=examples/mpi/mpi_defs3.hpp
 MATH=$(HOME)/work/math/
+
+#USER_HEADER=examples/mpi/mpi_defs2.hpp
+#MATH=$(HOME)/work/math-mpi.old/
 
 # note: first build cmdstan with the following two lines commented out
 # also: install the two binary boost libraries somewhere and possibly

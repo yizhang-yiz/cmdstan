@@ -3,14 +3,17 @@ library(rstan)
 set.seed(1)
 run0 <- read_stan_csv("samples-1-rect-0.csv")
 set.seed(1)
-run1 <- read_stan_csv("samples-1-rect-1.csv")
+run1 <- read_stan_csv("samples-1-rect-0-2.csv")
 set.seed(1)
-run2 <- read_stan_csv("samples-1-rect-2.csv")
+run2 <- read_stan_csv("samples-1-rect-1.csv")
+set.seed(1)
+run3 <- read_stan_csv("samples-1-rect-2.csv")
 
 
 print(run0, "lp__")
 print(run1, "lp__")
 print(run2, "lp__")
+print(run3, "lp__")
 
 lp0 <- extract(run0, "lp__", inc_warmup=TRUE, permuted=FALSE)
 lp1 <- extract(run1, "lp__", inc_warmup=TRUE, permuted=FALSE)
@@ -22,3 +25,7 @@ lp0 - lp2
 sum(abs(lp0 - lp1))
 sum(abs(lp0 - lp2))
 sum(abs(lp1 - lp2))
+
+sp0 <- get_sampler_params(run0)[[1]]
+sp1 <- get_sampler_params(run1)[[1]]
+sp2 <- get_sampler_params(run2)[[1]]

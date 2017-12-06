@@ -12,3 +12,5 @@ use_ode <- 0
 worker <- 1
 dose <- 100
 use_shared <- 0
+use_mpi <- 1
+use_sum <- 0
