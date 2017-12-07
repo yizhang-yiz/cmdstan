@@ -1,8 +1,16 @@
 BOOST=~/local/boost_1_65_1
 
 #CC=clang++
-CC=g++-mp-6
-CXX=g++-mp-6
+#CC=g++-mp-6
+#CXX=g++-mp-6
+
+#CXX=clang++
+#CC=clang++
+CXX=mpic++
+CC=mpic++
+CXXFLAGS+=-DSTAN_HAS_MPI
+LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
+
 
 #CXXFLAGS +=-std=c++14
 O = 3
@@ -11,10 +19,12 @@ CXXFLAGS+=-Wno-unused-variable -Wno-unused-function
 ##CFLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 
 STANCFLAGS=--allow_undefined --name=mpi_model
-USER_HEADER=examples/mpi/mpi_defs3.hpp
-##OUTPUT_OPTION=--name=mpi_model
 
+USER_HEADER=examples/mpi/mpi_defs3.hpp
 MATH=$(HOME)/work/math/
+
+#USER_HEADER=examples/mpi/mpi_defs2.hpp
+#MATH=$(HOME)/work/math-mpi.old/
 
 # note: first build cmdstan with the following two lines commented out
 # also: install the two binary boost libraries somewhere and possibly
@@ -26,13 +36,12 @@ MATH=$(HOME)/work/math/
 
 #CC=mpic++
 
-CXXFLAGS+=-DSTAN_HAS_MPI -I~/local/boost_1_65_1
+#CXXFLAGS+=-DSTAN_HAS_MPI -I~/local/boost_1_65_1
 
-LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
 
 ## from mpicxx --showme
-LDFLAGS += -L/opt/local/lib/openmpi-mp -lmpi_cxx -lmpi
-CXXFLAGS += -I/opt/local/include/openmpi-mp
+#LDFLAGS += -L/opt/local/lib/openmpi-mp -lmpi_cxx -lmpi
+#CXXFLAGS += -I/opt/local/include/openmpi-mp
 
 
 ##LDFLAGS += $(HOME)/local/lib/libboost_serialization.a $(HOME)/local/lib/libboost_mpi.a 
