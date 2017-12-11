@@ -14,7 +14,7 @@ namespace mpi_model_namespace {
                const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
                const std::vector<std::vector<T2__> >& X_r,
                const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
-    return stan::math::map_rect_mpi<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
+    return stan::math::map_rect_mpi<0,mpi_function_functor__>(eta, Theta, X_r, X_i, pstream__);
   }
   
   template <typename T0__, typename T1__, typename T2__>
@@ -23,11 +23,12 @@ namespace mpi_model_namespace {
                const std::vector<Eigen::Matrix<T1__, Eigen::Dynamic, 1> >& Theta,
                const std::vector<std::vector<T2__> >& X_r,
                const std::vector<std::vector<int> >& X_i, std::ostream* pstream__) {
-    return stan::math::map_rect_serial<0,mpi_function_functor__>(eta, Theta, X_r, X_i);
+    return stan::math::map_rect_serial<0,mpi_function_functor__>(eta, Theta, X_r, X_i, pstream__);
   }
 
   // run a map_rect_serial which uses just like the MPI code a
   // precomputed gradient approach
+  /*
   template <>
   Eigen::Matrix<var, Eigen::Dynamic, 1>
   map_rect_serial(const Eigen::Matrix<var, Eigen::Dynamic, 1>& shared_params,
@@ -69,14 +70,10 @@ namespace mpi_model_namespace {
         out(ij) = ops_partials.build(world_result(0,j));
       }
     }
-    
-    //return
-    //stan::math::map_rect_serial<0,mpi_function_functor__>(eta,
-    //Theta, X_r, X_i);
     return(out);
   }
-  
+  */
 }
 
-STAN_REGISTER_MPI_MAP_RECT_ALL(0, mpi_model_namespace::mpi_function_functor__)
+STAN_REGISTER_MAP_RECT(0, mpi_model_namespace::mpi_function_functor__)
 
