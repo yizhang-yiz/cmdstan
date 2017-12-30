@@ -1,9 +1,19 @@
 
-This branch contains the very first prototype of MPI enabled
-within-chain parallelization and the second generation which uses a
-more mature code base.
+To get the MPI example working, please follow
 
-The second generation requires use of the stan-math branch
-feature/concept-mpi. This version uses the files marked with a "2" in
-their file names (oral_2cmt_mpi2.stan and mpi_defs2.hpp in
-examples/mpi).
+1. checkout the stan-math branch feature/concept-mpi-2 somewhere
+2. update make/local such that MATH points to this directory (with a
+trailing "/")
+3. make stan-mpi
+4. make build
+5. make examples/mpi/oral_2cmt_mpi4
+
+Finally, please ensure that you have on a Mac the variable
+
+DYLD_LIBRARY_PATH=$(BOOST)/stage/lib
+
+set accordingly. 
+
+Things have been setup to work on Mac, please adjust the call to stanc
+make/models accordingly to esnure that the dynamic libraries are
+found.
