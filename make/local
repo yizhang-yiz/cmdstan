@@ -17,6 +17,8 @@ LDFLAGS+=-L/opt/local/lib -L/opt/local/lib/openmpi-mp -lmpi_cxx -lmpi
 CXXFLAGS+=-DSTAN_HAS_MPI
 LDFLAGS += -L$(HOME)/local/lib -lboost_serialization -lboost_mpi
 
+## for cachegrind
+##CXXFLAGS+=-g
 
 #CXXFLAGS +=-std=c++14
 O = 3
