@@ -29,13 +29,13 @@ lVr <- 0.5 * log(0.2)
 ## sqrt(CL/Q)
 lCLr <- 0.5 * log(0.3)
 
-lka <- log(log(2)/2)
-
 lV1 <- lV + lVr
 lV2 <- lV - lVr
 
 lCL1 <- lCL + lCLr
 lCL2  <- lCL - lCLr
+
+lka <- log(log(2)/2)
 
 lfrel <- 0
 
@@ -45,7 +45,7 @@ lfrel <- 0
 ##true_theta <- c(lfrel, lka, lCL, lCLr, lV, lVr)
 true_theta <- c(lfrel, lka, lCL, lCLr, lV, lVr)
 
-true_omega <- c(0, 0.1, 0.3, 0.1, 0.2, 0)
+true_omega <- c(0, 0.1, 0.3, 0, 0.2, 0)
 
 pk_sys <- function(lstate0, theta) {
     function(x) {
@@ -84,11 +84,13 @@ make_ds()
 ## visualize results
 library(bayesplot)
 
-J <- 100
+J <- 50
 
 runs <- list(mpi=read_stan_csv(paste0("samples5-1-rect-", J, "-0.csv")),
              serial=read_stan_csv(paste0("samples5-1-rect-", J, "-1.csv")),
              stan=read_stan_csv(paste0("samples5-1-rect-", J, "-2.csv")))
+
+runs <- list(mpi=read_stan_csv(paste0("samples5-1-rect-", J, "-0.csv")))
 
 total <- colSums(sapply(runs, get_elapsed_time))
 
