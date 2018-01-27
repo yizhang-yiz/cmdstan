@@ -6,7 +6,7 @@
 #include <stan/math/prim/arr/functor/mpi_cluster.hpp>
 
 int main(int argc, const char* argv[]) {
-  boost::mpi::environment env;
+//  boost::mpi::environment env;
   int exitcode = 0;
   
   // on non-root processes this makes the workers listen to commands
@@ -16,6 +16,8 @@ int main(int argc, const char* argv[]) {
   boost::mpi::communicator world;
 
   const std::size_t rank = world.rank();
+
+std::cout << "started rank " << rank << " / " << world.size()  << std::endl;
 
   cluster.listen();
   

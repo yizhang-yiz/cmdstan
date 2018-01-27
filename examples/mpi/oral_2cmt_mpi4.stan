@@ -158,7 +158,7 @@ functions {
 
   real[] twoCmtOral_analytic(real ldose, real[] Dt, real[] theta) {
     //            (lka, lCL, lV1, lQ, lV2)
-    // theta = log(c(ka, CL, CLr, V, Vr))
+    // theta = log(c(CLa, CL, CLr, V, Vr))
     real lV1 = theta[4] + theta[5];
     vector[5] lmicro = trans_oral2cmt_macro2micro(theta[1], // ka
                                                   theta[2] + theta[3], // CL
@@ -169,6 +169,28 @@ functions {
     vector[3] state0 = [ ldose, -25, -25 ]';
     matrix[num_elements(Dt),3] lstate = pk_oral_2cmt(state0, to_vector(Dt), lmicro[1], lmicro[2], lmicro[3], lmicro[4], lmicro[5]);
     return(to_array_1d(lstate[:,2] - lV1));
+  }
+
+  real[] twoCmtOral_mexp(real ldose, real[] Dt, real[] theta) {
+    // matrix exponential
+    vector[3] state0 = [ exp(ldose), 0, 0 ]' ;
+    real lV1 = theta[4] + theta[5];
+    real ka = exp(theta[1]); // ka
+    real CL = exp(theta[2] + theta[3]);
+    real V1 = exp(lV1);
+    real Q = exp(theta[2] - theta[3]);
+    real V2 = exp(theta[4] - theta[5]);
+    matrix[3,3] A = [ [-ka,          0,     0 ],
+                      [+ka, -(CL+Q)/V1,  Q/V2 ],
+                      [  0,       Q/V1, -Q/V2 ] ];
+    int T = size(Dt);
+    real run[T];
+    
+    for(i in 1:T) {
+      vector[3] statet = matrix_exp(A*Dt[i]) * state0;
+      run[i] = log(statet[2]) - lV1;
+    }
+    return(run);
   }
 
   real[] twoCmtOral_ode(real t,
@@ -192,7 +214,7 @@ functions {
   
   vector mpi_function(vector mu, vector eta, real[] x_r, int[] x_i) {
     int T = x_i[1];
-    int use_ode = x_i[2];
+    int use_solver = x_i[2];
     int num_omega = x_i[3];
     int ind_omega[num_omega] = x_i[4:(4+num_omega-1)];
     int known_sigma_y = x_i[3+num_omega+1];
@@ -206,7 +228,11 @@ functions {
     // take over the parameters which are per subject
     eta_a[ind_omega] = to_array_1d(eta);
     
-    if(use_ode) {
+    if(use_solver == 0) {
+      run = twoCmtOral_analytic(ldose + eta_a[1], x_r[1:T], eta_a[2:6]);
+    } else if(use_solver == 1) {
+      run =twoCmtOral_mexp(ldose + eta_a[1], x_r[1:T], eta_a[2:6]);
+    } else {
       real state0[3] = { exp(ldose + eta_a[1]), 0, 0 } ;
       real lV1 = eta_a[1+4] + eta_a[1+5];
       real theta_macro[5] = {
@@ -216,17 +242,15 @@ functions {
         exp(eta_a[1+2] - eta_a[1+3]), // Q
         exp(eta_a[1+4] - eta_a[1+5])  // V2
       };
-      real run2[T,3] = integrate_ode_rk45(twoCmtOral_ode,
-                                          state0, 
-                                          0, x_r[1:T],
-                                          theta_macro,
-                                          x_r[1:0], x_i,
-                                          1E-5, 1E-7, 1000);
+      real run2[T,3] = integrate_ode_bdf(twoCmtOral_ode,
+                                         state0, 
+                                         0, x_r[1:T],
+                                         theta_macro,
+                                         x_r[1:0], x_i,
+                                         1E-5, 1E-7, 1000);
       run = log(run2[:,2]);
       for(i in 1:T)
         run[i] = run[i] - lV1;
-    } else {
-      run = twoCmtOral_analytic(ldose + eta_a[1], x_r[1:T], eta_a[2:6]);
     }
 
     /*
@@ -283,7 +307,7 @@ data {
   real true_theta[6];
   real<lower=0> true_omega[6];
   int<lower=0,upper=2> use_map_rect;
-  int<lower=0,upper=1> use_ode;
+  int<lower=0,upper=2> use_solver;
   real<lower=0> dose;
   int<lower=0,upper=1> known_sigma_y;
   int<lower=0,upper=1> known_omega;
@@ -301,12 +325,12 @@ transformed data {
   cholesky_factor_cov[num_omega] L_Omega_known;
   int ind_active_theta[5] = {2, 3, 4, 5, 6};
   vector[5] true_theta_macro = [
-    exp(true_theta[1+1]), // ka
-    exp(true_theta[1+2] + true_theta[1+3]), // CL
-    exp(true_theta[1+4] + true_theta[1+5]), // V1
-    exp(true_theta[1+2] - true_theta[1+3]), // Q
-    exp(true_theta[1+4] - true_theta[1+5])  // V2
-  ]';
+                                exp(true_theta[1+1]), // ka
+                                exp(true_theta[1+2] + true_theta[1+3]), // CL
+                                exp(true_theta[1+4] + true_theta[1+5]), // V1
+                                exp(true_theta[1+2] - true_theta[1+3]), // Q
+                                exp(true_theta[1+4] - true_theta[1+5])  // V2
+                                ]';
 
   {
     int ci = 1;
@@ -318,7 +342,7 @@ transformed data {
     }
   }
 
-  L_Omega_known = cholesky_decompose(diag_matrix(square(to_vector(true_omega[ind_omega]))));
+  L_Omega_known = diag_matrix(to_vector(true_omega[ind_omega]));
 
   // we fix the population frel to be 1
   if(true_theta[1] != 0)
@@ -367,7 +391,7 @@ transformed data {
       x_r[j,T+k] = x_r[j,T+k] + normal_rng(0, 0.05);
 
     x_i[j,1] = T;
-    x_i[j,2] = use_ode;
+    x_i[j,2] = use_solver;
     x_i[j,3] = num_omega;
     x_i[j,4:(4+num_omega-1)] = ind_omega;
     x_i[j,3+num_omega+1] = known_sigma_y;
@@ -385,16 +409,17 @@ transformed data {
   } else if(use_map_rect == 2) {
     print("Using map_rect_stan.");
   }
-  if(use_ode) {
-    print("Using ODE integration.");
-  } else {
+  if(use_solver == 0) {
     print("Using analytic solution.");
+  } else if(use_solver == 1) {
+    print("Using Matrix Exponential.");
+  } else {
+    print("Using ODE integration.");
   }
 }
 parameters {
   vector[num_elements(ind_active_theta)] theta_raw;
-  //vector[num_omega] Eta_v[J];
-  vector[J] Eta_v[num_omega];
+  vector[num_omega] Eta_v[J];
   vector<lower=0>[num_omega] omega_raw;
   real<lower=0> sigma_y_raw;
 }
@@ -412,7 +437,6 @@ transformed parameters {
 }
 model {
   vector[1+6] mu;
-  vector[num_omega] Eta_a[J];
 
   mu[1] = sigma_y;
   mu[2:7] = theta_v;
@@ -421,35 +445,24 @@ model {
   theta_raw ~ normal(0, 1);
   
   // CP parametrization
-  /*
   if(known_omega) {
     Eta_v ~ multi_normal_cholesky(theta_v[ind_omega], L_Omega_known);
   } else {
-    Eta_v ~ multi_normal_cholesky(theta_v[ind_omega], cholesky_decompose(diag_matrix(square(omega_v))));
+    // note that we assume a diagonal prior covariance matrix such
+    // that the cholesky factor is equal to a diagonal matrix with the
+    // random effect standard deviations
+    Eta_v ~ multi_normal_cholesky(theta_v[ind_omega], diag_matrix(omega_v));
   }
-  */
-  if(known_omega) {
-    for(i in 1:num_omega)
-      Eta_v[i] ~ normal(theta_v[ind_omega[i]], true_omega[ind_omega[i]]);
-  } else {
-    for(i in 1:num_omega)
-      Eta_v[i] ~ normal(theta_v[ind_omega[i]], omega_v[i]);
-  }
-  
+
   omega_raw ~ normal(0, 1);
   sigma_y_raw ~ normal(0, 0.25);
 
-  for(j in 1:J) {
-    for(i in 1:num_omega)
-      Eta_a[j,i] = Eta_v[i,j];
-  }
-
   if(use_map_rect == 0) {
-    target += map_rect_mpi(mu, Eta_a, x_r, x_i);
+    target += map_rect_mpi(mu, Eta_v, x_r, x_i);
   } else if(use_map_rect == 1) {
-    target += map_rect_serial(mu, Eta_a, x_r, x_i);
+    target += map_rect_serial(mu, Eta_v, x_r, x_i);
   } else {
-    target += map_rect_stan(mu, Eta_a, M, x_r, x_i);
+    target += map_rect_stan(mu, Eta_v, M, x_r, x_i);
   }
 }
 generated quantities {
@@ -457,19 +470,5 @@ generated quantities {
   vector[num_elements(ind_active_theta)] mse_theta = square(bias_theta);
   vector[num_omega] bias_omega = omega_v - to_vector(true_omega[ind_omega]);
   vector[num_omega] mse_omega = square(bias_omega);
-  vector[num_omega] avg_eta = rep_vector(0, num_omega);
   vector[1] bias_sigma_y = [ sigma_y - 0.05 ]';
-
-  /*
-  for(j in 1:J) {
-    for(i in 1:num_omega)
-      avg_eta[i] = avg_eta[i] + Eta_v[j,i];
-  }
-
-  avg_eta = avg_eta / J;
-  */
-  
-  for(i in 1:num_omega)
-    avg_eta[i] = mean(Eta_v[i]);
-  
 }
