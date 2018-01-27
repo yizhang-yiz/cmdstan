@@ -68,7 +68,7 @@ make_ds <- function() {
                       time=Dt,
                       true_theta=true_theta,
                       true_omega=true_omega,
-                      use_ode=0,
+                      use_solver=0,
                       known_omega=1,
                       known_sigma_y=0,
                       dose=dose
