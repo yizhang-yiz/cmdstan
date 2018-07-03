@@ -83,6 +83,16 @@ CMDSTAN_VERSION := 2.18.0
 -include $(MATH)make/setup_mpi
 -include $(MATH)make/libstanmath_mpi # $(MATH)bin/libstanmath_mpi.a
 
+WITH_EXTERN_PDE ?= 0
+ifeq ($(WITH_EXTERN_PDE), 1)
+	CXXFLAGS += -DSTAN_EXTERN_PDE -DSTAN_PDE_USER_HEADER="$(USER_HEADER)"
+ifndef EXTERN_PDE_MAKEFILE
+$(error EXTERN_PDE_MAKEFILE is not set)
+endif
+	include $(EXTERN_PDE_MAKEFILE)
+endif
+
+
 include make/libstan  # libstan.a
 include make/models   # models
 include make/tests
