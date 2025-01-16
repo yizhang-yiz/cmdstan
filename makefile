@@ -16,15 +16,14 @@
 # The default target of this Makefile is...
 help:
 
--include $(HOME)/.config/stan/make.local  # user-defined variables
+
 -include make/local                       # user-defined variables
 
 STAN ?= stan/
 MATH ?= $(STAN)lib/stan_math/
-RAPIDJSON ?= lib/rapidjson_1.1.0/
+RAPIDJSON ?= $(STAN)lib/rapidjson_1.1.0/
 CLI11 ?= lib/CLI11-1.9.1/
 INC_FIRST ?= -I src -I $(STAN)src -I $(RAPIDJSON) -I $(CLI11)
-USER_HEADER ?= $(dir $<)user_header.hpp
 
 ## Detect operating system
 ifneq ($(OS),Windows_NT)
@@ -97,24 +96,43 @@ endif
 
 ifdef STAN_THREADS
 STAN_FLAG_THREADS=_threads
+else
+STAN_FLAG_THREADS=
 endif
 ifdef STAN_MPI
 STAN_FLAG_MPI=_mpi
+else
+STAN_FLAG_MPI=
 endif
 ifdef STAN_OPENCL
 STAN_FLAG_OPENCL=_opencl
+else
+STAN_FLAG_OPENCL=
+endif
+ifdef STAN_NO_RANGE_CHECKS
+STAN_FLAG_NO_RANGE_CHECKS=_nochecks
+else
+STAN_FLAG_NO_RANGE_CHECKS=
 endif
 
-STAN_FLAGS=$(STAN_FLAG_THREADS)$(STAN_FLAG_MPI)$(STAN_FLAG_OPENCL)
+STAN_FLAGS=$(STAN_FLAG_THREADS)$(STAN_FLAG_MPI)$(STAN_FLAG_OPENCL)$(STAN_FLAG_NO_RANGE_CHECKS)
 
 ifeq ($(OS),Windows_NT)
+ifeq (clang,$(CXX_TYPE))
 PRECOMPILED_HEADERS ?= false
+else
+ifeq ($(shell expr $(CXX_MAJOR) \>= 8), 1)
+PRECOMPILED_HEADERS ?= true
+else
+PRECOMPILED_HEADERS ?= false
+endif
+endif
 else
 PRECOMPILED_HEADERS ?= true
 endif
 
 ifeq ($(PRECOMPILED_HEADERS),true)
-PRECOMPILED_MODEL_HEADER=$(STAN)src/stan/model/model_header$(STAN_FLAGS).hpp.gch
+PRECOMPILED_MODEL_HEADER=$(STAN)src/stan/model/model_header.hpp.gch/model_header$(STAN_FLAGS)_$(CXX_MAJOR)_$(CXX_MINOR).hpp.gch
 ifeq ($(CXX_TYPE),gcc)
 CXXFLAGS_PROGRAM+= -Wno-ignored-attributes $(CXXFLAGS_OPTIM) $(CXXFLAGS_FLTO)
 endif
@@ -122,22 +140,15 @@ else
 PRECOMPILED_MODEL_HEADER=
 endif
 
--include $(MATH)make/compiler_flags
--include $(MATH)make/dependencies
--include $(MATH)make/libraries
+include $(MATH)make/compiler_flags
+include $(MATH)make/dependencies
+include $(MATH)make/libraries
 include make/stanc
 include make/program
 include make/tests
 include make/command
 
-CMDSTAN_VERSION := 2.26.1
-
-ifeq ($(OS),Windows_NT)
-HELP_MAKE=mingw32-make
-else
-HELP_MAKE=make
-endif
-
+CMDSTAN_VERSION := 2.36.0
 
 .PHONY: help
 help:
@@ -145,7 +156,7 @@ help:
 	@echo 'CmdStan v$(CMDSTAN_VERSION) help'
 	@echo ''
 	@echo '  Build CmdStan utilities:'
-	@echo '    > $(HELP_MAKE) build'
+	@echo '    > $(MAKE) build'
 	@echo ''
 	@echo '    This target will:'
 	@echo '    1. Install the Stan compiler bin/stanc$(EXE) from stanc3 binaries.'
@@ -156,13 +167,13 @@ help:
 	@echo ''
 	@echo '    Note: to build using multiple cores, use the -j option to make, e.g., '
 	@echo '    for 4 cores:'
-	@echo '    > $(HELP_MAKE) build -j4'
+	@echo '    > $(MAKE) build -j4'
 	@echo ''
 ifeq ($(OS),Windows_NT)
 	@echo '    On Windows it is recommended to include with the PATH environment'
 	@echo '    variable the directory of the Intel TBB library.'
 	@echo '    This can be setup permanently for the user with'
-	@echo '    > mingw32-make install-tbb'
+	@echo '    > make install-tbb'
 endif
 	@echo ''
 	@echo '  Build a Stan program:'
@@ -185,13 +196,15 @@ endif
 	@echo '      directory of the Stan program.'
 	@echo '    STANC3_VERSION: When set, uses that tagged version specified; otherwise, downloads'
 	@echo '      the nightly version.'
-	@echo '    STAN_CPP_OPTIMS: Turns on additonal compiler flags for performance           '
+	@echo '    STAN_CPP_OPTIMS: Turns on additonal compiler flags for performance.'
+	@echo '    STAN_NO_RANGE_CHECKS: Removes the range checks from the model for performance.'
+	@echo '    STAN_THREADS: Enable multi-threaded execution of the Stan model.'
 	@echo ''
 	@echo ''
 	@echo '  Example - bernoulli model: examples/bernoulli/bernoulli.stan'
 	@echo ''
 	@echo '    1. Build the model:'
-	@echo '       > $(HELP_MAKE) examples/bernoulli/bernoulli$(EXE)'
+	@echo '       > $(MAKE) examples/bernoulli/bernoulli$(EXE)'
 	@echo '    2. Run the model:'
 	@echo '       > examples/bernoulli/bernoulli$(EXE) sample data file=examples/bernoulli/bernoulli.data.R'
 	@echo '    3. Look at the samples:'
@@ -228,8 +241,8 @@ help-dev:
 	@echo 'Model related:'
 	@echo '- bin/stanc$(EXE): Download the Stan compiler binary.'
 	@echo '- bin/print$(EXE): Build the print utility. (deprecated)'
-	@echo '- bin/stansummary$(EXE): Build the print utility.'
-	@echo '- bin/diagnostic$(EXE): Build the diagnostic utility.'
+	@echo '- bin/stansummary$(EXE): Build the stansummary utility.'
+	@echo '- bin/diagnose$(EXE): Build the diagnose utility.'
 	@echo ''
 	@echo '- *$(EXE)        : If a Stan model exists at *.stan, this target will build'
 	@echo '                   the Stan model as an executable.'
@@ -241,30 +254,18 @@ build-mpi: $(MPI_TARGETS)
 	@echo ''
 	@echo '--- boost mpi bindings built ---'
 
-ifeq ($(CMDSTAN_SUBMODULES),1)
 .PHONY: build
-build: bin/stanc$(EXE) bin/stansummary$(EXE) bin/print$(EXE) bin/diagnose$(EXE) $(LIBSUNDIALS) $(MPI_TARGETS) $(TBB_TARGETS) $(CMDSTAN_MAIN_O) $(PRECOMPILED_MODEL_HEADER)
+build: bin/stanc$(EXE) $(SUNDIALS_TARGETS) $(MPI_TARGETS) $(TBB_TARGETS) $(CMDSTAN_MAIN_O) $(PRECOMPILED_MODEL_HEADER) bin/stansummary$(EXE) bin/print$(EXE) bin/diagnose$(EXE)
 	@echo ''
 ifeq ($(OS),Windows_NT)
 		@echo 'NOTE: Please add $(TBB_BIN_ABSOLUTE_PATH) to your PATH variable.'
 		@echo 'You may call'
 		@echo ''
-		@echo '$(HELP_MAKE) install-tbb'
+		@echo '$(MAKE) install-tbb'
 		@echo ''
 		@echo 'to automatically update your user configuration.'
 endif
 	@echo '--- CmdStan v$(CMDSTAN_VERSION) built ---'
-else
-.PHONY: build
-build:
-	@echo 'ERROR: Missing Stan submodules.'
-	@echo 'Please run the following to fix:'
-	@echo ''
-	@echo 'git submodule update --init --recursive'
-	@echo ''
-	@echo 'And try building again'
-	@exit 1
-endif
 
 .PHONY: install-tbb
 install-tbb: $(TBB_TARGETS)
@@ -275,14 +276,17 @@ endif
 ##
 # Clean up.
 ##
-.PHONY: clean clean-deps clean-manual clean-all clean-program
+.PHONY: clean clean-deps clean-all
 
-clean: clean-manual
-	$(RM) -r test
-	$(RM) $(wildcard $(patsubst %.stan,%.d,$(TEST_MODELS)))
-	$(RM) $(wildcard $(patsubst %.stan,%.hpp,$(TEST_MODELS)))
-	$(RM) $(wildcard $(patsubst %.stan,%.o,$(TEST_MODELS)))
-	$(RM) $(wildcard $(patsubst %.stan,%$(EXE),$(TEST_MODELS)))
+clean: clean-tests
+	@echo '  removing built CmdStan utilities'
+	$(RM) bin/stanc$(EXE) bin/stansummary$(EXE) bin/print$(EXE) bin/diagnose$(EXE)
+	$(RM) -r bin/cmdstan
+	@echo '  removing cached compiler objects'
+	$(RM) $(wildcard src/cmdstan/main*.o)
+	$(RM) -r $(wildcard $(STAN)src/stan/model/model_header*.hpp.gch)
+	@echo '  removing built example model'
+	$(RM) examples/bernoulli/bernoulli$(EXE) examples/bernoulli/bernoulli.o examples/bernoulli/bernoulli.d examples/bernoulli/bernoulli.hpp $(wildcard examples/bernoulli/*.csv)
 
 clean-deps:
 	@echo '  removing dependency files'
@@ -291,20 +295,6 @@ clean-deps:
 	$(RM) $(call findfiles,src,*.dSYM) $(call findfiles,src/stan,*.dSYM) $(call findfiles,$(MATH)/stan,*.dSYM)
 
 clean-all: clean clean-deps clean-libraries
-	$(RM) bin/stanc$(EXE) bin/stansummary$(EXE) bin/print$(EXE) bin/diagnose$(EXE)
-	$(RM) -r src/cmdstan/main*.o bin/cmdstan
-	$(RM) $(wildcard $(STAN)src/stan/model/model_header*.hpp.gch)
-	$(RM) examples/bernoulli/bernoulli$(EXE) examples/bernoulli/bernoulli.o examples/bernoulli/bernoulli.d examples/bernoulli/bernoulli.hpp
-	$(RM) -r $(wildcard $(BOOST)/stage/lib $(BOOST)/bin.v2 $(BOOST)/tools/build/src/engine/bootstrap/ $(BOOST)/tools/build/src/engine/bin.* $(BOOST)/project-config.jam* $(BOOST)/b2 $(BOOST)/bjam $(BOOST)/bootstrap.log)
-
-clean-program:
-ifndef STANPROG
-	$(error STANPROG not set)
-endif
-	$(RM) "$(wildcard $(patsubst %.stan,%.d,$(basename ${STANPROG}).stan))"
-	$(RM) "$(wildcard $(patsubst %.stan,%.hpp,$(basename ${STANPROG}).stan))"
-	$(RM) "$(wildcard $(patsubst %.stan,%.o,$(basename ${STANPROG}).stan))"
-	$(RM) "$(wildcard $(patsubst %.stan,%$(EXE),$(basename ${STANPROG}).stan))"
 
 ##
 # Submodule related tasks
@@ -330,10 +320,30 @@ stan-revert:
 
 .PHONY: compile_info
 compile_info:
-	@echo '$(LINK.cpp) $(CXXFLAGS_PROGRAM) $(CMDSTAN_MAIN_O) $(LDLIBS) $(LIBSUNDIALS) $(MPI_TARGETS) $(TBB_TARGETS)'
+	@echo '$(LINK.cpp) $(CXXFLAGS_PROGRAM) $(CMDSTAN_MAIN_O) $(LDLIBS) $(SUNDIALS_TARGETS) $(MPI_TARGETS) $(TBB_TARGETS)'
 
 ##
 # Debug target that allows you to print a variable
 ##
 .PHONY: print-%
 print-%  : ; @echo $* = $($*)
+
+.PHONY: clean-build
+clean-build: clean-all build
+
+
+##
+# This is only run if the `include` statements earlier fail to find a file.
+# We assume that means the submodule is missing
+##
+$(MATH)make/% :
+	@echo 'ERROR: Missing Stan submodules.'
+	@echo 'We tried to find the Stan Math submodule at:'
+	@echo '  $(MATH)'
+	@echo ''
+	@echo 'The most likely source of the problem is CmdStan was cloned without'
+	@echo 'the --recursive flag.  To fix this, run the following command:'
+	@echo '  git submodule update --init --recursive'
+	@echo ''
+	@echo 'And try building again'
+	@exit 1

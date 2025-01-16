@@ -9,7 +9,6 @@ endef
 
 # if nothing was set to $(OS) that means that the Stan Math submodule is missing
 OS ?= missing-submodules
-CMDSTAN_SUBMODULES = 1
 STANC_DL_RETRY = 5
 STANC_DL_DELAY = 10
 STANC3_TEST_BIN_URL ?=
@@ -22,20 +21,33 @@ else ifeq ($(OS),Darwin)
  STANC_XATTR := $(shell xattr bin/mac-stanc 2>/dev/null)
 else ifeq ($(OS),Linux)
  OS_TAG := linux
-else ifeq ($(OS),missing-submodules)
- CMDSTAN_SUBMODULES = 0
+ ifeq ($(shell uname -m),mips64)
+  ARCH_TAG := -mips64el
+ else ifeq ($(shell uname -m),ppc64le)
+  ARCH_TAG := -ppc64el
+ else ifeq ($(shell uname -m),s390x)
+  ARCH_TAG := -s390x
+ else ifeq ($(shell uname -m),aarch64)
+  ARCH_TAG := -arm64
+ else ifeq ($(shell uname -m),armv7l)
+  ifeq ($(shell readelf -A /usr/bin/file | grep Tag_ABI_VFP_args),)
+    ARCH_TAG := -armel
+  else
+    ARCH_TAG := -armhf
+  endif
+ endif
+
 else
   $(error  Cannot detect OS properly. $n This will impede automatically downloading the correct stanc. $n Please visit https://github.com/stan-dev/stanc3/releases and download a stanc binary for your OS and place it in ./bin/stanc. $n )
 endif
 
-# bin/stanc build rules - requires stan, stan_math submodules in place
-ifeq ($(CMDSTAN_SUBMODULES),1)
+# bin/stanc build rules
 ifneq ($(STANC3),)
   # build stanc3 from local installation
   bin/stanc$(EXE) : $(call findfiles,$(STANC3)/src/,*.ml*) $(STANC#)
 	@mkdir -p $(dir $@)
 	cd $(STANC3) && echo "--- Rebuilding stanc ---\n" && dune build @install
-	cp $(STANC3)/_build/default/src/stanc/stanc.exe $@
+	test -f $(STANC3)/_build/default/src/stanc/stanc.exe && rm -f $@ && cp $(STANC3)/_build/default/src/stanc/stanc.exe $@ || exit 1
 else ifneq ($(STANC3_TEST_BIN_URL),)
 # download stanc3 build from specific branch
 ifeq ($(OS_TAG),windows)
@@ -45,7 +57,7 @@ ifeq ($(OS_TAG),windows)
 else
     bin/stanc$(EXE) :
 	@mkdir -p $(dir $@)
-	curl -L $(STANC3_TEST_BIN_URL)/bin/$(OS_TAG)-stanc -o bin/stanc$(EXE) --retry $(STANC_DL_RETRY) --retry-delay $(STANC_DL_DELAY)
+	curl -L $(STANC3_TEST_BIN_URL)/bin/$(OS_TAG)$(ARCH_TAG)-stanc -o bin/stanc$(EXE) --retry $(STANC_DL_RETRY) --retry-delay $(STANC_DL_DELAY)
 	chmod +x bin/stanc$(EXE)
 endif
 
@@ -54,7 +66,7 @@ else ifneq ($(STANC_XATTR),)
     bin/stanc$(EXE) :
 	cp bin/mac-stanc bin/stanc$(EXE)
 	chmod +x bin/stanc
-	xattr -d com.apple.quarantine bin/stanc
+	-xattr -d com.apple.quarantine bin/stanc
 
 else ifneq (,$(wildcard bin/$(OS_TAG)-stanc))
 # use release stanc3 binary (Windows, Linux & MacOS releases before Catalina)
@@ -72,8 +84,7 @@ else
 # get latest stanc3 - Linux & MacOS
     bin/stanc$(EXE) :
 	@mkdir -p $(dir $@)
-	curl -L https://github.com/stan-dev/stanc3/releases/download/$(STANC3_VERSION)/$(OS_TAG)-stanc -o bin/stanc$(EXE) --retry $(STANC_DL_RETRY) --retry-delay $(STANC_DL_DELAY)
+	curl -L https://github.com/stan-dev/stanc3/releases/download/$(STANC3_VERSION)/$(OS_TAG)$(ARCH_TAG)-stanc -o bin/stanc$(EXE) --retry $(STANC_DL_RETRY) --retry-delay $(STANC_DL_DELAY)
 	chmod +x bin/stanc$(EXE)
-endif
 endif
 # end bin/stanc build rules

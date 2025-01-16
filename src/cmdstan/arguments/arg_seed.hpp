@@ -3,21 +3,21 @@
 
 #include <cmdstan/arguments/singleton_argument.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <string>
 
 namespace cmdstan {
 
-class arg_seed : public int_argument {
+class arg_seed : public long_long_int_argument {
  public:
   unsigned int _random_value;
-  arg_seed() : int_argument() {
+  arg_seed() : long_long_int_argument() {
     _name = "seed";
     _description = "Random number generator seed";
-    _validity = "integer >= 0 or -1 to generate seed from system time";
+    _validity
+        = "non-negative integer < 4294967296  or -1 to generate seed from "
+          "system time";
     _default = "-1";
     _default_value = -1;
-    _constrained = true;
-    _good_value = 18383;
-    _bad_value = -2;
     _value = _default_value;
     _random_value
         = (boost::posix_time::microsec_clock::universal_time()
@@ -25,7 +25,9 @@ class arg_seed : public int_argument {
               .total_milliseconds();
   }
 
-  bool is_valid(int value) { return value >= 0 || value == _default_value; }
+  bool is_valid(long long int value) {
+    return (value <= UINT_MAX && value >= 0) || value == _default_value;
+  }
 
   unsigned int random_value() {
     if (_value == _default_value) {
@@ -37,9 +39,9 @@ class arg_seed : public int_argument {
 
   std::string print_value() {
     if (_value == _default_value) {
-      return boost::lexical_cast<std::string>(_random_value);
+      return std::to_string(_random_value);
     } else {
-      return boost::lexical_cast<std::string>(_value);
+      return std::to_string(_value);
     }
   }
 };

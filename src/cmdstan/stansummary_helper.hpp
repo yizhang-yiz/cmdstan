@@ -1,11 +1,12 @@
 #ifndef CMDSTAN_STANSUMMARY_HELPER_HPP
 #define CMDSTAN_STANSUMMARY_HELPER_HPP
 
-#include <stan/mcmc/chains.hpp>
+#include <stan/mcmc/chainset.hpp>
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <ios>
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -28,17 +29,21 @@ void compute_width_and_precision(double value, int sig_figs, int &width,
   if (value == 0) {
     width = sig_figs;
     precision = sig_figs;
+  } else if (std::isnan(value)) {
+    width = 3;
+    precision = sig_figs;
   } else if (abs_value >= 1) {
-    int int_part = std::ceil(log10(abs_value) + 1e-6);
+    int int_part = static_cast<int>(std::ceil(log10(abs_value) + 1e-6));
     width = int_part >= sig_figs ? int_part : sig_figs + 1;
     precision = int_part >= sig_figs ? 0 : sig_figs - int_part;
   } else {
-    int frac_part = std::fabs(std::floor(log10(abs_value)));
+    int frac_part = static_cast<int>(std::fabs(std::floor(log10(abs_value))));
     width = 1 + frac_part + sig_figs;
     precision = frac_part + sig_figs - 1;
   }
 
-  if (value < 0)
+  // account for negative numbers
+  if (std::signbit(value))
     ++width;
 }
 
@@ -158,10 +163,12 @@ bool is_container(const std::string &parameter_name) {
 /**
  * Return parameter name corresponding to column label.
  *
+ * @tparam Tchains - either a mcmc::chains or mcmc::chainset object
  * @param in column index
  * @return variable name
  */
-std::string base_param_name(const stan::mcmc::chains<> &chains, int index) {
+template <typename Tchains>
+std::string base_param_name(const Tchains &chains, int index) {
   std::string name = chains.param_name(index);
   return name.substr(0, name.find("["));
 }
@@ -169,11 +176,13 @@ std::string base_param_name(const stan::mcmc::chains<> &chains, int index) {
 /**
  * Return parameter name corresponding to column label.
  *
+ * @tparam Tchains - either a mcmc::chains or mcmc::chainset object
  * @param in set of samples from one or more chains
  * @param in column index
  * @return parameter name
  */
-std::string matrix_index(const stan::mcmc::chains<> &chains, int index) {
+template <typename Tchains>
+std::string matrix_index(const Tchains &chains, int index) {
   std::string name = chains.param_name(index);
   return name.substr(name.find("["));
 }
@@ -181,12 +190,13 @@ std::string matrix_index(const stan::mcmc::chains<> &chains, int index) {
 /**
  * Return vector of dimensions for container variable.
  *
+ * @tparam Tchains - either a mcmc::chains or mcmc::chainset object
  * @param in set of samples from one or more chains
  * @param in column index of first container element
  * @return vector of dimensions
  */
-std::vector<int> dimensions(const stan::mcmc::chains<> &chains,
-                            int start_index) {
+template <typename Tchains>
+std::vector<int> dimensions(const Tchains &chains, int start_index) {
   std::vector<int> dims;
   int dim;
 
@@ -279,32 +289,31 @@ int matrix_index(std::vector<int> &index, const std::vector<int> &dims) {
 }
 
 /**
- * Convert percentiles - int values in range (1,99)
+ * Convert percentiles - string-encoded doubles in range (0,100)
  * to probabilities - double values in range (0, 1).
  *
- * <p>Input values must be in strictly increasing order.
+ * Input values must be in strictly increasing order.
  *
  * @param vector of strings
  * @return vector of doubles
  */
 Eigen::VectorXd percentiles_to_probs(
-    const std::vector<std::string> percentiles) {
+    const std::vector<std::string> &percentiles) {
   Eigen::VectorXd probs(percentiles.size());
   int cur_pct = 0;
-  int pct = 0;
-  int i = 0;
+  double pct = 0;
   for (size_t i = 0; i < percentiles.size(); ++i) {
     try {
-      pct = std::stoi(percentiles[i]);
-      if (pct < 1 || pct > 99 || pct < cur_pct)
+      pct = std::stod(percentiles[i]);
+      if (!std::isfinite(pct) || pct < 0.0 || pct > 100.0 || pct < cur_pct)
         throw std::exception();
       cur_pct = pct;
     } catch (const std::exception &e) {
       throw std::invalid_argument(
-          "values must be in range (1,99)"
+          "values must be in range (0, 100)"
           ", inclusive, and strictly increasing.");
     }
-    probs[i] = pct * 1.0 / 100.0;
+    probs[i] = pct / 100.0;
   }
   return probs;
 }
@@ -313,115 +322,108 @@ Eigen::VectorXd percentiles_to_probs(
  * Assemble set of Stan csv files into a stan::mcmc::chains object
  *
  * @param in vector of filenames of stan csv files
- * @param in out  metatdata
+ * @param in out  metadata
  * @param in out  warmup times for each chain
  * @param in out  sampling times for each chain
  * @param in out  thinning for each chain
  * @param out output stream
  * @return stan::mcmc::chains object
  */
-stan::mcmc::chains<> parse_csv_files(const std::vector<std::string> &filenames,
+stan::mcmc::chainset parse_csv_files(const std::vector<std::string> &filenames,
                                      stan::io::stan_csv_metadata &metadata,
                                      Eigen::VectorXd &warmup_times,
                                      Eigen::VectorXd &sampling_times,
                                      Eigen::VectorXi &thin, std::ostream *out) {
-  // instantiate stan::mcmc::chains object by parsing first file
+  std::vector<stan::io::stan_csv> csvs;
+  csvs.reserve(filenames.size());
   std::ifstream ifstream;
-  ifstream.open(filenames[0].c_str());
-  stan::io::stan_csv stan_csv = stan::io::stan_csv_reader::parse(ifstream, out);
-  ifstream.close();
-  if (stan_csv.samples.rows() < 1) {
-    std::stringstream message_stream("");
-    message_stream << "No sampling draws found in Stan CSV file: "
-                   << filenames[0] << ".";
-    throw std::invalid_argument(message_stream.str());
-  }
-  warmup_times(0) = stan_csv.timing.warmup;
-  sampling_times(0) = stan_csv.timing.sampling;
-  stan::mcmc::chains<> chains(stan_csv);
-  thin(0) = stan_csv.metadata.thin;
-  metadata = stan_csv.metadata;
 
-  // parse rest of input files, add to chains
-  for (std::vector<std::string>::size_type chain = 1; chain < filenames.size();
-       chain++) {
+  for (size_t chain = 0; chain < filenames.size(); chain++) {
     ifstream.open(filenames[chain].c_str());
-    stan_csv = stan::io::stan_csv_reader::parse(ifstream, out);
+    csvs.push_back(stan::io::stan_csv_reader::parse(ifstream, out));
     ifstream.close();
+    auto &stan_csv = csvs[chain];
     if (stan_csv.samples.rows() < 1) {
       std::stringstream message_stream("");
       message_stream << "No sampling draws found in Stan CSV file: "
                      << filenames[chain] << ".";
       throw std::invalid_argument(message_stream.str());
     }
-    chains.add(stan_csv);
     thin(chain) = stan_csv.metadata.thin;
     warmup_times(chain) = stan_csv.timing.warmup;
     sampling_times(chain) = stan_csv.timing.sampling;
   }
-  return chains;
+  metadata = csvs[0].metadata;
+  return stan::mcmc::chainset(csvs);
 }
 
 /**
  * Assemble vector of output column labels as follows:
- * Mean, MCSE, StdDev, specified quantile labels, N_eff, N_eff/S, R-hat
+ *  Mean, MCSE,  StdDev, MAD, ... percentiles ..., ESS_bulk, ESS_tail, R_hat
  *
  * @param in vector of percentile values as strings
  * @return vector column labels
  */
 std::vector<std::string> get_header(
     const std::vector<std::string> &percentiles) {
-  // Mean, MCSE,  StdDev, ... percentiles ..., N_eff, N_eff/s, R_hat
-  std::vector<std::string> header(percentiles.size() + 6);
+  // Mean, MCSE,  StdDev, MAD, ... percentiles ..., ESS_bulk, ESS_tail, R_hat
+  std::vector<std::string> header(percentiles.size() + 7);
   header.at(0) = "Mean";
   header.at(1) = "MCSE";
   header.at(2) = "StdDev";
+  header.at(3) = "MAD";
   for (size_t i = 0; i < percentiles.size(); ++i) {
-    header[i + 3] = percentiles[i] + '%';
+    header[i + 4] = percentiles[i] + '%';
   }
-  size_t offset = 3 + percentiles.size();
-  header.at(offset) = "N_Eff";
-  header.at(offset + 1) = "N_Eff/s";
+  size_t offset = 4 + percentiles.size();
+  header.at(offset) = "ESS_bulk";
+  header.at(offset + 1) = "ESS_tail";
   header.at(offset + 2) = "R_hat";
   return header;
 }
 
 /**
  * Compute statistics for span of output columns
- * Mean, MCSE, StdDev, specified quantile, N_eff, N_eff/S, R-hat
+ *  Mean, MCSE,  StdDev, MAD, ... percentiles ..., ESS_bulk, ESS_tail, R_hat
  *
  * @param in set of samples from one or more chains
  * @param in vector of warmup times  (required for N_eff/S)
  * @param in vector of sampling times (required for N_eff/S)
  * @param in vector of probabilities
- * @param in index of first model param column in chains object
+ * @param in vector of model param column incides in chains object
  * @param in span length
  * @param in out matrix of model param statistics
  */
-void get_stats(const stan::mcmc::chains<> &chains,
-               const Eigen::VectorXd &warmup_times,
+void get_stats(const stan::mcmc::chainset &chains,
                const Eigen::VectorXd &sampling_times,
-               const Eigen::VectorXd &probs, int params_start_col,
+               const Eigen::VectorXd &probs, std::vector<int> cols,
                Eigen::MatrixXd &params) {
   params.setZero();
-  double total_warmup_time = warmup_times.sum();
-  double total_sampling_time = sampling_times.sum();
+
+  if (params.rows() != cols.size()) {
+    throw std::domain_error("get_stats: size mismatch");
+  }
 
   // Model parameters
-  for (int i = 0, i_chains = params_start_col; i < params.rows();
-       ++i, ++i_chains) {
-    double sd = chains.sd(i_chains);
-    double n_eff = chains.effective_sample_size(i_chains);
+  int i = 0;
+  for (int i_chains : cols) {
     params(i, 0) = chains.mean(i_chains);
-    params(i, 1) = sd / sqrt(n_eff);
-    params(i, 2) = sd;
+    params(i, 1) = chains.mcse_mean(i_chains);
+    params(i, 2) = chains.sd(i_chains);
+    params(i, 3) = chains.med_abs_deviation(i_chains);
     Eigen::VectorXd quantiles = chains.quantiles(i_chains, probs);
     for (int j = 0; j < quantiles.size(); j++)
-      params(i, 3 + j) = quantiles(j);
-    params(i, quantiles.size() + 3) = n_eff;
-    params(i, quantiles.size() + 4) = n_eff / total_sampling_time;
-    params(i, quantiles.size() + 5)
-        = chains.split_potential_scale_reduction(i_chains);
+      params(i, 4 + j) = quantiles(j);
+
+    auto [ess_bulk, ess_tail] = chains.split_rank_normalized_ess(i_chains);
+
+    params(i, quantiles.size() + 4) = ess_bulk;
+    params(i, quantiles.size() + 5) = ess_tail;
+
+    auto [rhat_bulk, rhat_tail] = chains.split_rank_normalized_rhat(i_chains);
+    params(i, quantiles.size() + 6)
+        = rhat_bulk > rhat_tail ? rhat_bulk : rhat_tail;
+    i++;
   }
 }
 
@@ -462,18 +464,64 @@ void write_header(const std::vector<std::string> &header,
  * @param in vector of output column formats
  * @param in size of longest parameter name - (width of 1st output column)
  * @param in significant digits required
- * @param in index of first column in chains object
+ * @param in vector of column indexes to output from chains
  * @param in output format flag:  true for csv; false for plain text
  * @param in output stream
  */
-void write_params(const stan::mcmc::chains<> &chains,
+void write_params(const stan::mcmc::chainset &chains,
                   const Eigen::MatrixXd &params,
                   const Eigen::VectorXi &col_widths,
                   const Eigen::Matrix<std::ios_base::fmtflags, Eigen::Dynamic,
                                       1> &col_formats,
-                  int max_name_length, int sig_figs, int params_start_col,
+                  int max_name_length, int sig_figs, std::vector<int> cols,
                   bool as_csv, std::ostream *out) {
-  int num_sampler_params = params.rows();
+  int i = 0;
+  for (int i_chains : cols) {
+    if (as_csv) {
+      *out << "\"" << chains.param_name(i_chains) << "\"";
+      for (int j = 0; j < params.cols(); j++) {
+        *out << "," << params(i, j);
+      }
+    } else {
+      *out << std::setw(max_name_length + 1) << std::left
+           << chains.param_name(i_chains);
+      *out << std::right;
+      for (int j = 0; j < params.cols(); j++) {
+        std::cout.setf(col_formats(j), std::ios::floatfield);
+        *out << std::setprecision(
+            compute_precision(params(i, j), sig_figs,
+                              col_formats(j) == std::ios_base::scientific))
+             << std::setw(col_widths(j)) << params(i, j);
+      }
+    }
+    *out << std::endl;
+    i++;
+  }
+}
+
+/**
+ * Output statistics for a set of parameters
+ * either as fixed-width text columns or in csv format.
+ * Containers are re-ordered as first-index-major order
+ *
+ * @param in set of samples from one or more chains
+ * @param in matrix of statistics
+ * @param in vector of output column widths
+ * @param in vector of output column formats
+ * @param in size of longest parameter name - (width of 1st output column)
+ * @param in significant digits required
+ * @param in index of first column in chains object
+ * @param in output format flag:  true for csv; false for plain text
+ * @param in output stream
+ */
+void write_all_model_params(const stan::mcmc::chainset &chains,
+                            const Eigen::MatrixXd &params,
+                            const Eigen::VectorXi &col_widths,
+                            const Eigen::Matrix<std::ios_base::fmtflags,
+                                                Eigen::Dynamic, 1> &col_formats,
+                            int max_name_length, int sig_figs,
+                            int params_start_col, bool as_csv,
+                            std::ostream *out) {
   for (int i = 0, i_chains = params_start_col; i < params.rows();
        ++i, ++i_chains) {
     if (!is_container(chains.param_name(i_chains))) {
@@ -487,10 +535,10 @@ void write_params(const stan::mcmc::chains<> &chains,
              << chains.param_name(i_chains);
         *out << std::right;
         for (int j = 0; j < params.cols(); j++) {
-          std::cout.setf(col_formats(j), std::ios::floatfield);
-          *out << std::setprecision(compute_precision(
-                      params(i, j), sig_figs,
-                      col_formats(j) == std::ios_base::scientific))
+          out->setf(col_formats(j), std::ios::floatfield);
+          *out << std::setprecision(
+              compute_precision(params(i, j), sig_figs,
+                                col_formats(j) == std::ios_base::scientific))
                << std::setw(col_widths(j)) << params(i, j);
         }
       }
@@ -509,20 +557,17 @@ void write_params(const stan::mcmc::chains<> &chains,
         if (as_csv) {
           *out << "\"" << chains.param_name(row_maj_index_chains) << "\"";
           for (int j = 0; j < params.cols(); j++) {
-            *out << "," << std::fixed
-                 << std::setprecision(compute_precision(
-                        params(row_maj_index, j), sig_figs, false))
-                 << params(row_maj_index, j);
+            *out << "," << params(row_maj_index, j);
           }
         } else {
           *out << std::setw(max_name_length + 1) << std::left
                << chains.param_name(row_maj_index_chains);
           *out << std::right;
           for (int j = 0; j < params.cols(); j++) {
-            std::cout.setf(col_formats(j), std::ios::floatfield);
-            *out << std::setprecision(compute_precision(
-                        params(row_maj_index, j), sig_figs,
-                        col_formats(j) == std::ios_base::scientific))
+            out->setf(col_formats(j), std::ios::floatfield);
+            *out << std::setprecision(
+                compute_precision(params(row_maj_index, j), sig_figs,
+                                  col_formats(j) == std::ios_base::scientific))
                  << std::setw(col_widths(j)) << params(row_maj_index, j);
           }
         }
@@ -540,33 +585,24 @@ void write_params(const stan::mcmc::chains<> &chains,
  * Output timing statistics for all chains
  *
  * @param in set of samples from one or more chains
- * @param in metatdata
+ * @param in metadata
  * @param in warmup times for each chain
  * @param in sampling times for each chain
  * @param in thinning for each chain
  * @param in prefix string - used to output as comments in csv file
  * @param out output stream
  */
-void write_timing(const stan::mcmc::chains<> &chains,
+void write_timing(const stan::mcmc::chainset &chains,
                   const stan::io::stan_csv_metadata &metadata,
                   const Eigen::VectorXd &warmup_times,
                   const Eigen::VectorXd &sampling_times,
                   const Eigen::VectorXi &thin, const std::string &prefix,
                   std::ostream *out) {
   *out << prefix << "Inference for Stan model: " << metadata.model << std::endl
-       << prefix << chains.num_chains() << " chains: each with iter=("
-       << chains.num_kept_samples(0);
-  for (int chain = 1; chain < chains.num_chains(); chain++)
-    *out << "," << chains.num_kept_samples(chain);
-  *out << ")";
-  *out << "; warmup=(" << chains.warmup(0);
-  for (int chain = 1; chain < chains.num_chains(); chain++)
-    *out << "," << chains.warmup(chain);
-  *out << ")";
-  *out << "; thin=(" << thin(0);
-  for (int chain = 1; chain < chains.num_chains(); chain++)
-    *out << "," << thin(chain);
-  *out << ")";
+       << prefix << chains.num_chains()
+       << " chains: each with iter=" << metadata.num_samples;
+  *out << "; warmup=" << metadata.num_warmup;
+  *out << "; thin=" << metadata.thin;
   *out << "; " << chains.num_samples() << " iterations saved." << std::endl
        << prefix << std::endl;
 
@@ -639,7 +675,7 @@ void write_timing(const stan::mcmc::chains<> &chains,
 /**
  * Output sampler information
  *
- * @param in metatdata
+ * @param in metadata
  * @param in prefix string - used to output as comments in csv file
  * @param out output stream
  */
@@ -649,14 +685,15 @@ void write_sampler_info(const stan::io::stan_csv_metadata &metadata,
   *out << prefix << "Samples were drawn using " << metadata.algorithm
        << " with " << metadata.engine << "." << std::endl;
   *out << prefix
-       << "For each parameter, N_Eff is a crude measure of effective "
-          "sample size,"
+       << "For each parameter, ESS_bulk and ESS_tail measure the "
+          "effective sample size "
+          "for the entire sample (bulk) and for the "
+          ".05 and .95 tails (tail), "
        << std::endl;
   *out << prefix
-       << "and R_hat is the potential scale reduction factor on split "
-          "chains (at "
+       << "and R_hat measures the potential scale reduction on split chains. "
+          "At convergence R_hat will be very close to 1.00."
        << std::endl;
-  *out << prefix << "convergence, R_hat=1)." << std::endl;
 }
 
 /**
@@ -667,16 +704,16 @@ void write_sampler_info(const stan::io::stan_csv_metadata &metadata,
  * size < 100, lag 1, size < 1000, lag 2, size < 10000 lag 3, etc.
 
  * @param in set of samples from one or more chains
- * @param in metatdata
+ * @param in metadata
  * @param in 1-based index of stan csv input file
  * @param in size of longest sampler param name
  */
 // autocorrelation report prints to std::out
-void autocorrelation(const stan::mcmc::chains<> &chains,
+void autocorrelation(const stan::mcmc::chainset &chains,
                      const stan::io::stan_csv_metadata &metadata,
                      int autocorr_idx, int max_name_length) {
   int c = autocorr_idx - 1;
-  Eigen::MatrixXd autocorr(chains.num_params(), chains.num_samples(c));
+  Eigen::MatrixXd autocorr(chains.num_params(), chains.num_samples());
   for (int i = 0; i < chains.num_params(); ++i) {
     autocorr.row(i) = chains.autocorrelation(c, i);
   }
